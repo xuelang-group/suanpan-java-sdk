@@ -8,6 +8,7 @@ import com.xuelang.mqstream.options.Queue;
 import com.xuelang.mqstream.response.XReadGroupResponse;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisFuture;
+import io.lettuce.core.RedisURI;
 import io.lettuce.core.XAddArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
@@ -28,6 +29,12 @@ public class RedisStreamMqClient implements MqClient {
 
     public RedisStreamMqClient(String url) {
         this.client = RedisClient.create(url);
+        this.connection = this.client.connect();
+    }
+
+    public RedisStreamMqClient(String host, int port, String password) {
+        RedisURI uri = RedisURI.Builder.redis(host, port).withPassword(password).build();
+        this.client = RedisClient.create(uri);
         this.connection = this.client.connect();
     }
 
@@ -136,6 +143,9 @@ public class RedisStreamMqClient implements MqClient {
     }
 
     public void destroy() {
-        this.connection.close();
+        if (this.connection != null)
+            this.connection.close();
+        if (this.client != null)
+            this.client.connect();
     }
 }

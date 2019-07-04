@@ -31,8 +31,8 @@ public class MqStreamClientTest {
     @Test
     public void test_send_message() {
         Message message = Message.builder()
-                .queue("xw_backend")
-                .keysAndValues(Message.prepareKeysAndValues("node", "hello"))
+                .queue("xw-send")
+                .keysAndValues(Message.prepareKeysAndValues("node", "hello", "data", "cool"))
                 .build();
         String messageId = mqClient.sendMessage(message);
         System.out.println(messageId);
@@ -56,8 +56,8 @@ public class MqStreamClientTest {
     @Test
     public void test_subscribe_queue() {
         Consumer consumer = Consumer.builder()
-                .queue("js_queue")
-                .group("js_group")
+                .queue("xw-recv")
+                .group("default")
                 .count(1)
                 .build();
         mqClient.subscribeQueue(consumer, new ExampleReadGroupHandler(), new ExampleExceptionHandler());

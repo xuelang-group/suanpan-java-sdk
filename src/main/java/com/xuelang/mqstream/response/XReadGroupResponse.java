@@ -24,7 +24,7 @@ public class XReadGroupResponse {
         messageIds.add(consumeId);
 
         List keysAndValues = (List) message.get(1);
-        for (int i = 0; i < keysAndValues.size() - 1; i++) {
+        for (int i = 0; i < keysAndValues.size() - 1; i += 2) {
             String key = (String) keysAndValues.get(i);
             String value = (String) keysAndValues.get(i+1);
             Map<String, String> item = new HashMap<>();

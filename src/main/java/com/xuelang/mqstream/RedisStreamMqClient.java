@@ -32,6 +32,12 @@ public class RedisStreamMqClient implements MqClient {
         this.connection = this.client.connect();
     }
 
+    public RedisStreamMqClient(String host, int port) {
+        RedisURI uri = RedisURI.Builder.redis(host, port).build();
+        this.client = RedisClient.create(uri);
+        this.connection = this.client.connect();
+    }
+
     public RedisStreamMqClient(String host, int port, String password) {
         RedisURI uri = RedisURI.Builder.redis(host, port).withPassword(password).build();
         this.client = RedisClient.create(uri);

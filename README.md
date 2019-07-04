@@ -7,7 +7,11 @@ Currently, the SDK implements the following interfaces.
 ## establish connection
 
 ```java
+// url
 MqClient mqClient = new RedisStreamMqClient("redis://127.0.0.1");
+
+// host and port
+MqClient mqClient = new RedisStreamMqClient("192.168.99.100", 6379);
 ```
 
 ## relase connection
@@ -49,6 +53,7 @@ MaxLength by default is set to 1000, and the data format follows the styles prov
 ## subscribe queue
 
 Please be noted that the subscribe queue interface will run infinitely, blocking the whole application.
+PS: can consider manipulate `ExecutorService` to execute subscribeQueue interface, preventing from blocking the main thread.
 
 When new message arrives in the subscribed queue, this method will fetch the message and pass it to the `Handler` object.
 

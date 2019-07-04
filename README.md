@@ -53,7 +53,8 @@ MaxLength by default is set to 1000, and the data format follows the styles prov
 ## subscribe queue
 
 Please be noted that the subscribe queue interface will run infinitely, blocking the whole application.
-PS: can consider manipulate `ExecutorService` to execute subscribeQueue interface, preventing from blocking the main thread.
+
+PS: You may consider manipulate `ExecutorService` to execute subscribeQueue interface, preventing from blocking the main thread.
 
 When new message arrives in the subscribed queue, this method will fetch the message and pass it to the `Handler` object.
 
@@ -74,6 +75,18 @@ mqClient.subscribeQueue(
 
 ExampleReadGroupHandler implements XReadGroupHandler interface, 
 while ExampleExceptionHandler implements ExceptionHandler interface.
+
+```java
+public interface XReadGroupHandler {
+    void handle(XReadGroupResponse response);
+}
+```
+
+```java
+public interface ExceptionHandler {
+    void handle(Exception e);
+}
+```
 
 ## retry pending messages
 

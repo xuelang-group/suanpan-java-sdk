@@ -152,6 +152,6 @@ public class RedisStreamMqClient implements MqClient {
         if (this.connection != null)
             this.connection.close();
         if (this.client != null)
-            this.client.connect();
+            this.client.shutdown();
     }
 }

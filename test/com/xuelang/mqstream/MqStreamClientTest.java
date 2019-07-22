@@ -9,6 +9,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.UUID;
+
 public class MqStreamClientTest {
 
     private static MqClient mqClient;
@@ -31,12 +33,24 @@ public class MqStreamClientTest {
     @Test
     public void test_send_message() {
         Message message = Message.builder()
-                .queue("xw-send")
+                .queue("xw-recv")
                 .keysAndValues(Message.prepareKeysAndValues("node", "hello", "data", "cool"))
                 .build();
         String messageId = mqClient.sendMessage(message);
         System.out.println(messageId);
     }
+
+    @Test
+    public void test_send_message_with_request_id() {
+        Message message = Message.builder()
+                .queue("xw-recv")
+                .keysAndValues(Message.prepareKeysAndValues("node", "hello", "data", "cool"))
+                .requestId(UUID.randomUUID().toString())
+                .build();
+        String messageId = mqClient.sendMessage(message);
+        System.out.println(messageId);
+    }
+
 
     @Test
     public void test_send_multi_message() {

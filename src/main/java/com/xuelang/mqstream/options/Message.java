@@ -11,6 +11,9 @@ public class Message {
 
     private String queue;
 
+    @Builder.Default
+    private String requestId = "";
+
     private Object[] keysAndValues;
 
     @Builder.Default

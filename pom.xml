@@ -4,8 +4,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.xuelang</groupId>
-	<artifactId>mq-stream</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<artifactId>suanpan-java-sdk</artifactId>
+	<version>1.0.1</version>
 	<packaging>jar</packaging>
 
 	<name>mq-stream</name>
@@ -16,6 +16,37 @@
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
 	</properties>
+
+	<build>
+
+		<plugins>
+
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<archive>
+						<!--<manifest>-->
+							<!--<addClasspath>true</addClasspath>-->
+							<!--<mainClass>Main</mainClass>-->
+						<!--</manifest>-->
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-my-jar-with-dependencies</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+		</plugins>
+	</build>
 
 	<dependencies>
 

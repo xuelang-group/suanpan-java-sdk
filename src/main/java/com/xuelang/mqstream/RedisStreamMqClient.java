@@ -19,6 +19,8 @@ import io.lettuce.core.protocol.CommandKeyword;
 import io.lettuce.core.protocol.CommandType;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -78,7 +80,12 @@ public class RedisStreamMqClient implements MqClient {
         XAddArgs addArgs = XAddArgs.Builder
                 .maxlen(message.getMaxLength())
                 .approximateTrimming(message.isApproximateTrimming());
-        RedisFuture<String> future = commands.xadd(message.getQueue(), addArgs, message.getKeysAndValues());
+        List<Object> keysAndValues = new ArrayList<>(Arrays.asList(message.getKeysAndValues()));
+        keysAndValues.add("request_id");
+        keysAndValues.add(message.getRequestId());
+        Object[] data = keysAndValues.toArray(new Object[0]);
+        RedisFuture<String> future =
+                commands.xadd(message.getQueue(), addArgs, data);
         try {
             return future.get();
         } catch (InterruptedException | ExecutionException e) {

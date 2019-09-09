@@ -46,6 +46,7 @@ public class RedisStreamMqClient implements MqClient {
         this.connection = this.client.connect();
     }
 
+    @Override
     public void createQueue(Queue queue, boolean existedOk) {
         RedisAsyncCommands<String, String> commands = this.connection.async();
         StringCodec codec = StringCodec.UTF8;
@@ -154,7 +155,7 @@ public class RedisStreamMqClient implements MqClient {
             throw new RuntimeException(e);
         }
     }
-
+    @Override
     public void destroy() {
         if (this.connection != null)
             this.connection.close();

@@ -17,7 +17,7 @@ public class MqStreamClientTest {
 
     @BeforeClass
     public static void setUp() {
-        mqClient = new RedisStreamMqClient("192.168.99.100", 6379);
+        mqClient = new RedisStreamMqClient("10.88.36.127", 6379);
     }
 
     @Test

@@ -127,8 +127,16 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
             return;
         }
 
+        final List<String> targets = new ArrayList<>();
+
+        String defaultTarget = eventDto.getInput().replace("in", "out");
+        if (listenerMapping.targets() != null && listenerMapping.targets().length > 0) {
+            targets.addAll(Arrays.asList(listenerMapping.targets()));
+        } else {
+            targets.add(defaultTarget);
+        }
+
         final DealMsg finalDealMsg = dealMsg;
-        final BussinessListenerMapping finalListenerMapping = listenerMapping;
 
         ExecutorService executorService = asyncExecutorService;
 
@@ -149,7 +157,7 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
                         }
 
                         MqSendServiceFactory.getMqSendService().sendSuccessMessageToTarget(
-                                Arrays.asList(finalListenerMapping.targets()),
+                                targets,
                                 eventDto.getEvent(),
                                 obj == null ? "" : JSON.toJSONString(obj),
                                 eventDto.getExtra(),
@@ -158,7 +166,7 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
                     } catch (Exception e) {
                         log.error("dispatchEvent {} failed", eventDto.getEvent(), e);
                         MqSendServiceFactory.getMqSendService().sendErrorMessageToTarget(
-                                Arrays.asList(finalListenerMapping.targets()),
+                                targets,
                                 eventDto.getEvent(),
                                 eventDto.getExtra(),
                                 eventDto.getRequestId()

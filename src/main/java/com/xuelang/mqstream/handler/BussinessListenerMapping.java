@@ -26,7 +26,7 @@ public @interface BussinessListenerMapping {
      *
      * @return
      */
-    String[] targets();
+    String[] targets() default {};
 
     /**
      * 是否异步

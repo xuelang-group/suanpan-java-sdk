@@ -116,7 +116,7 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
         BussinessListenerMapping listenerMapping = null;
 
         for (Map.Entry<BussinessListenerMapping, DealMsg> entry : mappingCache.entrySet()) {
-            if (entry.getKey().input().equals(eventDto.getInput())) {
+            if ((StringUtils.isBlank(entry.getKey().input()) || entry.getKey().input().equals(eventDto.getInput())) && entry.getKey().event().equals(eventDto.getEvent())) {
                 dealMsg = entry.getValue();
                 listenerMapping = entry.getKey();
                 break;

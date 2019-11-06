@@ -12,7 +12,7 @@ public @interface BussinessListenerMapping {
      *
      * @return
      */
-    String input();
+    String input() default "";
 
     /**
      * 事件

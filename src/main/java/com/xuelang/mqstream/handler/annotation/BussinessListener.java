@@ -1,4 +1,4 @@
-package com.xuelang.mqstream.handler;
+package com.xuelang.mqstream.handler.annotation;
 
 import java.lang.annotation.*;
 

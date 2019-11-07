@@ -16,21 +16,22 @@ public class XReadGroupResponse {
 
     private List<String> messageIds;
 
-    public List<Map<String, String>> data;
+    public List<Map<String, String>> messages;
 
-
-    private static void parseMessage(List message, List<String> messageIds, List<Map<String, String>> data) {
+    private static void parseMessage(List message, List<String> messageIds, List<Map<String, String>> messages) {
         String consumeId = (String) message.get(0);
         messageIds.add(consumeId);
+
+        Map<String, String> item = new HashMap<>();
 
         List keysAndValues = (List) message.get(1);
         for (int i = 0; i < keysAndValues.size() - 1; i += 2) {
             String key = (String) keysAndValues.get(i);
-            String value = (String) keysAndValues.get(i+1);
-            Map<String, String> item = new HashMap<>();
+            String value = (String) keysAndValues.get(i + 1);
             item.put(key, value);
-            data.add(item);
         }
+
+        messages.add(item);
     }
 
     public static XReadGroupResponse fromOutput(List output) {

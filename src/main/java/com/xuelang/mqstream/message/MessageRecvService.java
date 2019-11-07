@@ -25,7 +25,7 @@ public class MessageRecvService {
     private DefaultMessageRecvHandler defaultMessageRecvHandler;
 
     public MessageRecvService(List<Object> businessListenerInstances) {
-        defaultMessageRecvHandler = new DefaultMessageRecvHandler(businessListenerInstances);
+//        defaultMessageRecvHandler = new DefaultMessageRecvHandler(businessListenerInstances);
     }
 
     public void subscribeMsg() {

@@ -1,17 +1,14 @@
 package com.xuelang.mqstream.handler;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Maps;
-import com.xuelang.mqstream.message.MqSendServiceFactory;
+import com.xuelang.mqstream.handler.annotation.BussinessListenerMapping;
+import com.xuelang.mqstream.message.arguments.BaseType;
 import com.xuelang.mqstream.response.XReadGroupResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -25,26 +22,21 @@ import java.util.concurrent.Executors;
 @Slf4j
 public class DefaultMessageRecvHandler implements XReadGroupHandler {
 
-    private static final List<String> inputs = new ArrayList<>();
-
     private static ExecutorService asyncExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 2);
 
     private static ExecutorService syncExecutorService = Executors.newFixedThreadPool(1);
 
-    //预设20个输入
-    static {
-        for (int i = 1; i <= 20; i++) {
-            inputs.add("in" + i);
-        }
-    }
+    private Map<BussinessListenerMapping, DealMsgInvokeObj> mappingCache = Maps.newHashMap();
 
-    private Map<BussinessListenerMapping, DealMsg> mappingCache = Maps.newHashMap();
+    private Class messageDataTypeClass;
 
-    public DefaultMessageRecvHandler(List<Object> instances) {
+    public DefaultMessageRecvHandler(List<Object> businessListenerInstances, Class messageDataTypeClass) {
 
-        if (null != instances && instances.size() > 0) {
+        this.messageDataTypeClass = messageDataTypeClass;
 
-            for (Object instance : instances) {
+        if (null != businessListenerInstances && businessListenerInstances.size() > 0) {
+
+            for (Object instance : businessListenerInstances) {
                 Class c = instance.getClass();
 
                 Method[] declaredMethods = c.getDeclaredMethods();
@@ -53,10 +45,9 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
                     boolean annotationPresent = declaredMethod.isAnnotationPresent(BussinessListenerMapping.class);
                     if (annotationPresent) {
                         BussinessListenerMapping methodAnno = declaredMethod.getAnnotation(BussinessListenerMapping.class);
-                        DealMsg dealMsg = new DealMsg();
+                        DealMsgInvokeObj dealMsg = new DealMsgInvokeObj();
                         dealMsg.setMethod(declaredMethod);
                         dealMsg.setObject(instance);
-                        dealMsg.setAsync(methodAnno.async());
                         mappingCache.put(methodAnno, dealMsg);
                     }
                 }
@@ -68,121 +59,55 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
     public void handle(XReadGroupResponse response) {
         log.info("receive: {}", response);
 
-        MqEventDto eventDto = new MqEventDto();
+        List<Map<String, String>> messages = response.getMessages();
 
-        List<Map<String, String>> data = response.getData();
+        Constructor declaredConstructor = null;
 
-        for (String input : inputs) {
-            for (Map<String, String> item : data) {
-                if (item.containsKey(input)) {
-                    String value = item.get(input);
-
-                    JSONObject parseObject = JSON.parseObject(value);
-                    String event = parseObject.getString("event");
-                    JSONObject eventData = parseObject.getJSONObject("data");
-                    eventDto.setEvent(event);
-                    eventDto.setData(eventData);
-
-                    eventDto.setInput(input);
-                }
-
-                if (item.containsKey("extra")) {
-                    String extraValue = item.get("extra");
-                    if (StringUtils.isNotBlank(extraValue)) {
-                        eventDto.setExtra(extraValue);
-                    }
-                }
-
-                if (item.containsKey("id")) {
-                    String id = item.get("id");
-                    eventDto.setRequestId(id);
-                }
-            }
-
-            if (StringUtils.isNotBlank(eventDto.getInput())) {
-
-                dispatchEvent(eventDto);
-
-                break;
-            }
-        }
-    }
-
-    private void dispatchEvent(MqEventDto eventDto) {
-
-        log.info("eventDto:{}", eventDto.toString());
-
-        DealMsg dealMsg = null;
-        BussinessListenerMapping listenerMapping = null;
-
-        for (Map.Entry<BussinessListenerMapping, DealMsg> entry : mappingCache.entrySet()) {
-            if ((StringUtils.isBlank(entry.getKey().input()) || entry.getKey().input().equals(eventDto.getInput())) && entry.getKey().event().equals(eventDto.getEvent())) {
-                dealMsg = entry.getValue();
-                listenerMapping = entry.getKey();
-                break;
-            }
-        }
-
-        if (null == dealMsg) {
+        try {
+            declaredConstructor = messageDataTypeClass.getDeclaredConstructor(Map.class);
+        } catch (NoSuchMethodException e) {
+            log.error("没有找到此构造参数", e);
             return;
         }
 
-        final List<String> targets = new ArrayList<>();
+        for (Map<String, String> message : messages) {
 
-        String defaultTarget = eventDto.getInput().replace("in", "out");
-        if (listenerMapping.targets() != null && listenerMapping.targets().length > 0) {
-            targets.addAll(Arrays.asList(listenerMapping.targets()));
-        } else {
-            targets.add(defaultTarget);
+            BaseType baseType;
+
+            try {
+                baseType = (BaseType) declaredConstructor.newInstance(message);
+            } catch (Exception e) {
+                log.error("消息类型转换错误", e);
+                continue;
+            }
+
+            dispatchEvent(baseType);
         }
+    }
 
-        final DealMsg finalDealMsg = dealMsg;
+    private void dispatchEvent(BaseType baseType) {
+
+        log.info("messageDataType:{}", baseType);
+
+        Boolean asyncDealMessage = baseType.isAsyncDealMessage(mappingCache);
 
         ExecutorService executorService = asyncExecutorService;
 
         //async 为 false 改用同步线程执行
-        if (!dealMsg.async) {
+        if (!asyncDealMessage) {
             executorService = syncExecutorService;
         }
 
         executorService.execute(() -> {
-                    try {
-                        Method method = finalDealMsg.getMethod();
-                        int count = method.getParameterCount();
-                        Object obj;
-                        if (count == 0) {
-                            obj = method.invoke(finalDealMsg.getObject());
-                        } else {
-                            obj = method.invoke(finalDealMsg.getObject(), eventDto.getData());
-                        }
-
-                        MqSendServiceFactory.getMqSendService().sendSuccessMessageToTarget(
-                                targets,
-                                eventDto.getEvent(),
-                                obj == null ? "" : JSON.toJSONString(obj),
-                                eventDto.getExtra(),
-                                eventDto.getRequestId()
-                        );
-                    } catch (Exception e) {
-                        log.error("dispatchEvent {} failed", eventDto.getEvent(), e);
-                        MqSendServiceFactory.getMqSendService().sendErrorMessageToTarget(
-                                targets,
-                                eventDto.getEvent(),
-                                eventDto.getExtra(),
-                                eventDto.getRequestId()
-                        );
-                    }
-                }
-        );
+            baseType.dealMessageInvoke(mappingCache);
+        });
     }
 
     @Data
-    class DealMsg {
+    public static class DealMsgInvokeObj {
 
         private Method method;
 
         private Object object;
-
-        private Boolean async;
     }
 }

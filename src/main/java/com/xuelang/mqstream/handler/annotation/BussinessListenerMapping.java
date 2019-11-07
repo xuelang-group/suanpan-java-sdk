@@ -1,4 +1,4 @@
-package com.xuelang.mqstream.handler;
+package com.xuelang.mqstream.handler.annotation;
 
 import java.lang.annotation.*;
 
@@ -15,13 +15,6 @@ public @interface BussinessListenerMapping {
     String input() default "";
 
     /**
-     * 事件
-     *
-     * @return
-     */
-    String event();
-
-    /**
      * 出口
      *
      * @return
@@ -34,6 +27,12 @@ public @interface BussinessListenerMapping {
      * @return
      */
     boolean async() default true;
+
+    /**
+     * 基于事件类型的消息
+     * @return
+     */
+    String event() default "";
 }
 
 

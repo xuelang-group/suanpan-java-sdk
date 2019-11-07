@@ -4,9 +4,9 @@ import java.util.List;
 
 public interface MqSendService {
 
-    void sendSuccessMessageToTarget(String target, String event, String data, String extra, String requestId);
+    void sendSuccessMessageToTarget(String target, String data, String extra, String requestId);
 
-    void sendSuccessMessageToTarget(List<String> targets, String event, String data, String extra, String requestId);
+    void sendSuccessMessageToTarget(List<String> targets, String data, String extra, String requestId);
 
     void sendErrorMessageToTarget(String target, String errorMessage, String extra, String requestId);
 

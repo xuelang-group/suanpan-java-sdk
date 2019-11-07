@@ -1,6 +1,5 @@
 package com.xuelang.mqstream.message;
 
-import com.alibaba.fastjson.JSONObject;
 import com.xuelang.mqstream.MqClient;
 import com.xuelang.mqstream.MqClientFactory;
 import com.xuelang.mqstream.config.GlobalConfig;
@@ -21,17 +20,14 @@ import java.util.List;
 public class RedisMqSendService implements MqSendService {
 
     @Override
-    public void sendSuccessMessageToTarget(String target, String event, String data, String extra, String requestId) {
+    public void sendSuccessMessageToTarget(String target, String data, String extra, String requestId) {
         List<String> targets = Collections.singletonList(target);
-        sendSuccessMessageToTarget(targets, event, data, extra, requestId);
+        sendSuccessMessageToTarget(targets, data, extra, requestId);
     }
 
     @Override
-    public void sendSuccessMessageToTarget(List<String> targets, String event, String data, String extra, String requestId) {
+    public void sendSuccessMessageToTarget(List<String> targets, String data, String extra, String requestId) {
         MqClient mqClient = MqClientFactory.getMqClient();
-
-        JSONObject dataObject = new JSONObject();
-        dataObject.put(event, data);
 
         Message message = Message.builder()
                 .queue(GlobalConfig.streamSendQueue)

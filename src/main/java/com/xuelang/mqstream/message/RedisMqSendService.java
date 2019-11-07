@@ -54,10 +54,12 @@ public class RedisMqSendService implements MqSendService {
         String subMsg = message.toString();
 
         if (subMsg.length() > 2000) {
-            subMsg = subMsg.substring(0, 2000);
+            subMsg = subMsg.substring(0, 2000) + "......";
         }
 
         log.info("send success message to {},message : {}", GlobalConfig.streamSendQueue, subMsg);
+
+        mqClient.destroy();
     }
 
     @Override
@@ -81,5 +83,7 @@ public class RedisMqSendService implements MqSendService {
                 )
                 .build();
         client.sendMessage(message);
+
+        client.destroy();
     }
 }

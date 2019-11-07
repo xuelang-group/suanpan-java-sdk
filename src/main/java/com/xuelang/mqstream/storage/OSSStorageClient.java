@@ -147,4 +147,9 @@ public class OSSStorageClient implements StorageClient {
         OSSObject object = ossClient.getObject(bucketName, key);
         return object.getObjectContent();
     }
+
+    @Override
+    public String getBucketName() {
+        return GlobalConfig.ossBucketName;
+    }
 }

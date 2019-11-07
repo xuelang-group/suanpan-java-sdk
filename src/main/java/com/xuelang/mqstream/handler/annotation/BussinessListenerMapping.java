@@ -29,7 +29,15 @@ public @interface BussinessListenerMapping {
     boolean async() default true;
 
     /**
+     * 是否发送响应消息
+     *
+     * @return
+     */
+    boolean defaultSendResp() default true;
+
+    /**
      * 基于事件类型的消息
+     *
      * @return
      */
     String event() default "";

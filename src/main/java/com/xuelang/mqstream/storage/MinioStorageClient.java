@@ -170,4 +170,9 @@ public class MinioStorageClient implements StorageClient {
         }
         return null;
     }
+
+    @Override
+    public String getBucketName() {
+        return GlobalConfig.minioBucketName;
+    }
 }

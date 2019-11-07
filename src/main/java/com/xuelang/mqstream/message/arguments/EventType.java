@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.xuelang.mqstream.handler.DefaultMessageRecvHandler;
 import com.xuelang.mqstream.handler.annotation.BussinessListenerMapping;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
@@ -15,6 +16,7 @@ import java.util.Map;
  * @Description:
  */
 @Data
+@Slf4j
 public class EventType extends BaseType {
 
     private String event = "empty_event";
@@ -60,5 +62,10 @@ public class EventType extends BaseType {
             }
         }
         super.dealMessageInvoke(listenerMapping, dealMsgInvokeObj);
+    }
+
+    @Override
+    public Object[] getArgs() {
+        return new Object[]{this};
     }
 }

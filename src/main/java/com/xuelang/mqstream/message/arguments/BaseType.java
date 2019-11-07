@@ -68,6 +68,13 @@ public abstract class BaseType {
     public abstract void dealMessageInvoke(Map<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> mappingCache);
 
     /**
+     * 获取参数
+     *
+     * @return
+     */
+    public abstract Object[] getArgs();
+
+    /**
      * 消息处理
      *
      * @param listenerMapping
@@ -103,24 +110,24 @@ public abstract class BaseType {
             if (count == 0) {
                 obj = method.invoke(dealMsgInvokeObj.getObject());
             } else {
-                obj = method.invoke(dealMsgInvokeObj.getObject(), this.message);
+                obj = method.invoke(dealMsgInvokeObj.getObject(), getArgs());
             }
-
-            String data = "";
-            if (null != obj) {
-                try {
-                    data = JSON.toJSONString(obj);
-                } catch (Exception e) {
-                    data = obj.toString();
+            if (listenerMapping.defaultSendResp()) {
+                String data = "";
+                if (null != obj) {
+                    try {
+                        data = JSON.toJSONString(obj);
+                    } catch (Exception e) {
+                        data = obj.toString();
+                    }
                 }
+                MqSendServiceFactory.getMqSendService().sendSuccessMessageToTarget(
+                        targets,
+                        data,
+                        this.extra,
+                        this.requestId
+                );
             }
-
-            MqSendServiceFactory.getMqSendService().sendSuccessMessageToTarget(
-                    targets,
-                    data,
-                    this.extra,
-                    this.requestId
-            );
         } catch (Exception e) {
             log.error("消息处理失败", e);
             MqSendServiceFactory.getMqSendService().sendErrorMessageToTarget(

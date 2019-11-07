@@ -59,4 +59,9 @@ public class CommonType extends BaseType {
 
         dealMessageInvoke(listenerMapping, dealMsgInvokeObj);
     }
+
+    @Override
+    public Object[] getArgs() {
+        return new Object[]{this};
+    }
 }

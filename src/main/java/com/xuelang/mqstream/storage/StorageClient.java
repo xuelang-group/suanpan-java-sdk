@@ -24,4 +24,6 @@ public interface StorageClient {
     boolean doesObjectExist(String bucketName, String key);
 
     InputStream getObject(String bucketName, String key);
+
+    String getBucketName();
 }

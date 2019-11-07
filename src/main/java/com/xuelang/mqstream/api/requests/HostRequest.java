@@ -1,6 +1,7 @@
 package com.xuelang.mqstream.api.requests;
 
 import com.xuelang.mqstream.config.GlobalConfig;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * @Auther: zigui.zdf
@@ -11,7 +12,7 @@ public class HostRequest extends CommonRequest {
 
     @Override
     public String getUrl(String path) {
-        if (null == GlobalConfig.host) {
+        if (StringUtils.isBlank(GlobalConfig.host)) {
             throw new IllegalArgumentException("Suanpan API call Error: host not set");
         }
 

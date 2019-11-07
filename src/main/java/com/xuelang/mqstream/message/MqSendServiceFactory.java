@@ -1,12 +1,14 @@
 package com.xuelang.mqstream.message;
 
 import com.xuelang.mqstream.config.GlobalConfig;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @Auther: zigui.zdf
  * @Date: 2019/11/5 13:59
  * @Description:
  */
+@Slf4j
 public class MqSendServiceFactory {
 
     private MqSendServiceFactory() {

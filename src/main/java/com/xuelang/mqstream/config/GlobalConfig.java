@@ -121,4 +121,8 @@ public final class GlobalConfig {
     public static String mstorageRedisDefaultExpire = EnvUtil.get("SP_MSTORAGE_REDIS_DEFAULT_EXPIRE");
 
     public static String mstorageRedisHost = EnvUtil.get("SP_MSTORAGE_REDIS_HOST");
+
+    public static String spDockerRegistryHost = EnvUtil.get("SP_DOCKER_REGISTRY_HOST");
+
+    public static String spServiceDockerRegistryUrl = EnvUtil.get("SP_SERVICE_DOCKER_REGISTRY_URL");
 }

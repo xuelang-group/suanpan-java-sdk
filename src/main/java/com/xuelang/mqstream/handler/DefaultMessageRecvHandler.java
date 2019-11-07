@@ -87,8 +87,6 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
 
     private void dispatchEvent(BaseType baseType) {
 
-        log.info("messageDataType:{}", baseType);
-
         Boolean asyncDealMessage = baseType.isAsyncDealMessage(mappingCache);
 
         ExecutorService executorService = asyncExecutorService;

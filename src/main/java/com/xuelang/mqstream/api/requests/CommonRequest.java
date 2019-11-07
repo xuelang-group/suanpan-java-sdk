@@ -96,7 +96,6 @@ public abstract class CommonRequest {
      * @return
      */
     public String get(String path, Map<String, String> args) {
-
         HttpUrl.Builder builder = HttpUrl.parse(getUrl(path)).newBuilder();
 
         if (null != args && args.size() > 0) {

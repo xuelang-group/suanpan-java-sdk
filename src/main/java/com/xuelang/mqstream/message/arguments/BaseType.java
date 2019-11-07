@@ -62,6 +62,7 @@ public abstract class BaseType {
 
     /**
      * 消息处理
+     *
      * @param mappingCache
      */
     public abstract void dealMessageInvoke(Map<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> mappingCache);
@@ -105,9 +106,18 @@ public abstract class BaseType {
                 obj = method.invoke(dealMsgInvokeObj.getObject(), this.message);
             }
 
+            String data = "";
+            if (null != obj) {
+                try {
+                    data = JSON.toJSONString(obj);
+                } catch (Exception e) {
+                    data = obj.toString();
+                }
+            }
+
             MqSendServiceFactory.getMqSendService().sendSuccessMessageToTarget(
                     targets,
-                    obj == null ? "" : JSON.toJSONString(obj),
+                    data,
                     this.extra,
                     this.requestId
             );

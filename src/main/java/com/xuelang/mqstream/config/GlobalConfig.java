@@ -85,7 +85,7 @@ public final class GlobalConfig {
 
     public static String minioEndpoint = EnvUtil.get("SP_STORAGE_MINIO_ENDPOINT");
 
-    public static Boolean minioSecure = Boolean.valueOf(EnvUtil.get("SP_STORAGE_MINIO_SECURE", "true"));
+    public static Boolean minioSecure = Boolean.valueOf(EnvUtil.get("SP_STORAGE_MINIO_SECURE", "false"));
 
     public static String minioDelimiter = EnvUtil.get("SP_STORAGE_MINIO_DELIMITER", "/");
 

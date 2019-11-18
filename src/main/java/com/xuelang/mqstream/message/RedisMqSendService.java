@@ -20,13 +20,13 @@ import java.util.List;
 public class RedisMqSendService implements MqSendService {
 
     @Override
-    public void sendSuccessMessageToTarget(String target, String data, String extra, String requestId) {
+    public String sendSuccessMessageToTarget(String target, String data, String extra, String requestId) {
         List<String> targets = Collections.singletonList(target);
-        sendSuccessMessageToTarget(targets, data, extra, requestId);
+        return sendSuccessMessageToTarget(targets, data, extra, requestId);
     }
 
     @Override
-    public void sendSuccessMessageToTarget(List<String> targets, String data, String extra, String requestId) {
+    public String sendSuccessMessageToTarget(List<String> targets, String data, String extra, String requestId) {
         MqClient mqClient = MqClientFactory.getMqClient();
 
         Message message = Message.builder()
@@ -49,7 +49,7 @@ public class RedisMqSendService implements MqSendService {
 
         message.setKeysAndValues(keysAndValues.toArray(new String[0]));
 
-        mqClient.sendMessage(message);
+        String result = mqClient.sendMessage(message);
 
         String subMsg = message.toString();
 
@@ -60,16 +60,18 @@ public class RedisMqSendService implements MqSendService {
         log.info("send success message to {},message : {}", GlobalConfig.streamSendQueue, subMsg);
 
         mqClient.destroy();
+
+        return result;
     }
 
     @Override
-    public void sendErrorMessageToTarget(String target, String errorMessage, String extra, String requestId) {
+    public String sendErrorMessageToTarget(String target, String errorMessage, String extra, String requestId) {
         List<String> targets = Collections.singletonList(target);
-        sendErrorMessageToTarget(targets, errorMessage, extra, requestId);
+        return sendErrorMessageToTarget(targets, errorMessage, extra, requestId);
     }
 
     @Override
-    public void sendErrorMessageToTarget(List<String> targets, String errorMessage, String extra, String requestId) {
+    public String sendErrorMessageToTarget(List<String> targets, String errorMessage, String extra, String requestId) {
         MqClient client = MqClientFactory.getMqClient();
         Message message = Message.builder()
                 .queue(GlobalConfig.streamSendQueue)
@@ -82,8 +84,11 @@ public class RedisMqSendService implements MqSendService {
                         "request_id", requestId)
                 )
                 .build();
-        client.sendMessage(message);
+
+        String result = client.sendMessage(message);
 
         client.destroy();
+
+        return result;
     }
 }

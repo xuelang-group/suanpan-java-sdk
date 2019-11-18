@@ -29,13 +29,10 @@ public class MinioStorageClient implements StorageClient {
 
     private MinioClient minioClient;
 
-    private String expiration;
-
     private OSSApi ossApi = new OSSApi();
 
     public MinioStorageClient() {
         initClient();
-        refreshClientJob();
     }
 
     /**
@@ -50,29 +47,15 @@ public class MinioStorageClient implements StorageClient {
                         credentials.getAccessKeyId(),
                         credentials.getAccessKeySecret(),
                         GlobalConfig.minioSecure);
-                expiration = credentials.getExpiration();
                 log.info("minio client 创建成功");
             } else {
-                log.error("获取临时ak失败");
-                throw new RuntimeException("获取临时ak失败");
+                log.error("获取ak失败");
+                throw new RuntimeException("获取ak失败");
             }
         } catch (Exception e) {
             log.error("初始化minio client异常", e);
             throw new RuntimeException("初始化minio client异常");
         }
-    }
-
-    /**
-     * 定时刷新client
-     */
-    private void refreshClientJob() {
-        long epochSecond = Instant.parse(expiration).minusSeconds(Instant.now().getEpochSecond()).getEpochSecond();
-
-        //在client过期之前20s刷新
-        long intervalSecond = epochSecond - 20;
-
-        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
-        scheduledExecutorService.scheduleAtFixedRate(this::initClient, intervalSecond, intervalSecond, TimeUnit.SECONDS);
     }
 
     public MinioClient getMinioClient() {

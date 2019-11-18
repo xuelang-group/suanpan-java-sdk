@@ -15,13 +15,21 @@ public class MqClientFactory {
     }
 
     public static MqClient getMqClient() {
-        return getMqClient(GlobalConfig.mqRedisHost, GlobalConfig.mqRedisPort, GlobalConfig.mqType);
+        return getMqClient(GlobalConfig.mqRedisHost, GlobalConfig.mqRedisPort,  GlobalConfig.mqType);
     }
 
     public static MqClient getMqClient(String host, Integer port, String mqType) {
         MqClient mqClient = new RedisStreamMqClient(host, port);
         if ("redis".equals(mqType)) {
             mqClient = new RedisStreamMqClient(host, port);
+        }
+        return mqClient;
+    }
+
+    public static MqClient getMqClient(String host, Integer port, String password, String mqType) {
+        MqClient mqClient = new RedisStreamMqClient(host, port, password);
+        if ("redis".equals(mqType)) {
+            mqClient = new RedisStreamMqClient(host, port, password);
         }
         return mqClient;
     }

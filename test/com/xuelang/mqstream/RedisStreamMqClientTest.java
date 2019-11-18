@@ -47,7 +47,7 @@ public class RedisStreamMqClientTest {
                 .requestId("")
                 .keysAndValues(new Object[]{"requestId","dfa"})
                 .maxLength(100)
-                .approximateTrimming(false)
+                .approximateTrimming(true)
                 .build();
 
         String s = mqClient.sendMessage(message);

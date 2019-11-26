@@ -20,6 +20,8 @@ public class StorageClientFactory {
                 if (null == storageClient) {
                     if ("minio".equals(GlobalConfig.storageType)) {
                         storageClient = new MinioStorageClient();
+                    } else if ("local".equals(GlobalConfig.storageType)) {
+                        storageClient = new LocalStorageClient();
                     } else {
                         storageClient = new OSSStorageClient();
                     }

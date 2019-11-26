@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 /**
  * @Auther: zigui.zdf
@@ -24,34 +23,38 @@ public class MessageRecvService {
 
     private DefaultMessageRecvHandler defaultMessageRecvHandler;
 
+    private ExecutorService executorService;
+
     public MessageRecvService(List<Object> businessListenerInstances, Class messageDataTypeClass) {
         defaultMessageRecvHandler = new DefaultMessageRecvHandler(businessListenerInstances, messageDataTypeClass);
+        executorService = Executors.newFixedThreadPool(1);
     }
 
+    /**
+     * 使用默认处理器来处理订阅到的消息
+     */
     public void subscribeMsg() {
-        ExecutorService executorService = Executors.newFixedThreadPool(1);
-        Future future = executorService.submit(() -> {
-            subscribeQueue(defaultMessageRecvHandler);
-        });
-        try {
-            future.get();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        executorService.shutdown();
+        subscribeMsg(defaultMessageRecvHandler);
     }
 
+    /**
+     * 使用自定义处理器来处理订阅到的消息
+     *
+     * @param handler
+     */
     public void subscribeMsg(XReadGroupHandler handler) {
-        ExecutorService executorService = Executors.newFixedThreadPool(1);
-        Future future = executorService.submit(() -> {
+        executorService.submit(() -> {
             subscribeQueue(handler);
         });
-        try {
-            future.get();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    }
+
+    /**
+     * 停止订阅消息
+     */
+    public void stopSubscribeMsg() {
+        if (null != executorService && !executorService.isShutdown()) {
+            executorService.shutdownNow();
         }
-        executorService.shutdown();
     }
 
     private void subscribeQueue(XReadGroupHandler handler) {

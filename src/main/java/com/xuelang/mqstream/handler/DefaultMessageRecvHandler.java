@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 /**
  * @Auther: zigui.zdf
  * @Date: 2019/11/5 14:47
- * @Description: sdk提供默认的一种消息处理方式，可以自定义实现
+ * @Description: sdk提供默认的一种消息处理方式
  */
 @Slf4j
 public class DefaultMessageRecvHandler implements XReadGroupHandler {

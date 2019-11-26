@@ -94,11 +94,7 @@ public class RedisStreamMqClient implements MqClient {
     }
 
     @Override
-    public void subscribeQueue(
-            Consumer consumer,
-            XReadGroupHandler handler,
-            ExceptionHandler exceptionHandler
-    ) {
+    public void subscribeQueue(Consumer consumer,XReadGroupHandler handler,ExceptionHandler exceptionHandler) {
         Queue queue = Queue.builder()
                 .name(consumer.getQueue())
                 .group(consumer.getGroup())

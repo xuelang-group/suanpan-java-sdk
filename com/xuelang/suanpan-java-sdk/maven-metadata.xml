@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.xuelang</groupId>
+  <artifactId>suanpan-java-sdk</artifactId>
+  <versioning>
+    <release>2.0.0</release>
+    <versions>
+      <version>2.0.0</version>
+    </versions>
+    <lastUpdated>20191212075207</lastUpdated>
+  </versioning>
+</metadata>

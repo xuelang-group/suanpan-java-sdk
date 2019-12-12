@@ -11,12 +11,19 @@ Currently, the SDK implements the following interfaces.
 MqClient mqClient = new RedisStreamMqClient("redis://127.0.0.1");
 
 // host and port
-MqClient mqClient = new RedisStreamMqClient("192.168.99.100", 6379);
+MqClient mqClient = new RedisStreamMqClient("10.88.36.127", 6379);
+
+// host、port and password
+MqClient mqClient = new RedisStreamMqClient("10.88.36.127", 6379, "password");
+
+// use MqClientFactory (recommand)
+MqClient mqClient = MqClientFactory.getMqClient();
 ```
 
-## relase connection
+## release connection
 
 ```java
+// remember release connection when finished using mqClient
 mqClient.destroy();
 ```
 
@@ -114,9 +121,12 @@ Kindly add the following repository to your repositories tag.
 
 ```xml
 <repository>
-    <id>RockingJavaBean-maven-master-repository</id>
-    <name>RockingJavaBean-maven-master-repository</name>
-    <url>https://raw.githubusercontent.com/RockingJavaBean/maven2/maven2/</url>
+    <id>mvn-repo</id>
+    <url>https://raw.github.com/1069355234/mvn-repo/suanpan-java-sdk/</url>
+    <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+    </snapshots>
 </repository>
 ``` 
 
@@ -126,19 +136,7 @@ And add the following dependencies as well
 <dependency>
     <artifactId>com.xuelang</artifactId>
     <groupId>suanpan-java-sdk</groupId>
-    <version>1.0.1</version>
-</dependency>
-
-<dependency>
-    <groupId>io.lettuce</groupId>
-    <artifactId>lettuce-core</artifactId>
-    <version>5.1.7.RELEASE</version>
-</dependency>
-
-<dependency>
-    <groupId>org.apache.commons</groupId>
-    <artifactId>commons-lang3</artifactId>
-    <version>3.9</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 

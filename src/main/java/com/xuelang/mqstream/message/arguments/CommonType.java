@@ -17,7 +17,7 @@ import java.util.Map;
 @Slf4j
 public class CommonType extends BaseType {
 
-    CommonType(Map<String, String> message) {
+    public CommonType(Map<String, String> message) {
         super(message);
     }
 

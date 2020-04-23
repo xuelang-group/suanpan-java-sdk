@@ -10,6 +10,7 @@ import com.xuelang.mqstream.api.OSSApi;
 import com.xuelang.mqstream.api.response.Credentials;
 import com.xuelang.mqstream.config.GlobalConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.InputStream;
 import java.net.URL;
@@ -88,11 +89,27 @@ public class OSSStorageClient implements StorageClient {
     public List<ObjectSummary> listObjects(String bucketName, String prefix) {
         List<ObjectSummary> summaries = new ArrayList<>();
 
-        ObjectListing objectListing = ossClient.listObjects(bucketName, prefix);
+        final int maxKeys = 200;
+        String nextMarker = null;
 
-        for (OSSObjectSummary summary : objectListing.getObjectSummaries()) {
-            summaries.add(new ObjectSummary(summary.getBucketName(), summary.getKey()));
-        }
+        ObjectListing objectListing;
+
+        do {
+            ListObjectsRequest listObjectsRequest = new ListObjectsRequest(bucketName).
+                    withMarker(nextMarker).withMaxKeys(maxKeys);
+            if (StringUtils.isNotBlank(prefix)) {
+                listObjectsRequest.withPrefix(prefix);
+            }
+            objectListing = ossClient.listObjects(listObjectsRequest);
+
+            List<OSSObjectSummary> sums = objectListing.getObjectSummaries();
+            for (OSSObjectSummary summary : sums) {
+                summaries.add(new ObjectSummary(summary.getBucketName(), summary.getKey()));
+            }
+
+            nextMarker = objectListing.getNextMarker();
+
+        } while (objectListing.isTruncated());
 
         return summaries;
     }
@@ -104,19 +121,27 @@ public class OSSStorageClient implements StorageClient {
         if (recursive) {
             summaries = listObjects(bucketName, prefix);
         } else {
-            ListObjectsRequest listObjectsRequest = new ListObjectsRequest();
-            listObjectsRequest.setPrefix(prefix);
-            listObjectsRequest.setDelimiter("/");
-            listObjectsRequest.setBucketName(bucketName);
+            final int maxKeys = 200;
+            String nextMarker = null;
 
-            ObjectListing objectListing = ossClient.listObjects(listObjectsRequest);
-
-            for (OSSObjectSummary summary : objectListing.getObjectSummaries()) {
-                if (summary.getKey().equals(prefix)) {
-                    continue;
+            ObjectListing objectListing;
+            do {
+                ListObjectsRequest listObjectsRequest = new ListObjectsRequest(bucketName).
+                        withMarker(nextMarker).withMaxKeys(maxKeys).withDelimiter("/");
+                if (StringUtils.isNotBlank(prefix)) {
+                    listObjectsRequest.withPrefix(prefix);
                 }
-                summaries.add(new ObjectSummary(summary.getBucketName(), summary.getKey()));
-            }
+
+                objectListing = ossClient.listObjects(listObjectsRequest);
+
+                for (OSSObjectSummary summary : objectListing.getObjectSummaries()) {
+                    if (summary.getKey().equals(prefix)) {
+                        continue;
+                    }
+                    summaries.add(new ObjectSummary(summary.getBucketName(), summary.getKey()));
+                }
+                nextMarker = objectListing.getNextMarker();
+            } while (objectListing.isTruncated());
         }
         return summaries;
     }

@@ -84,6 +84,10 @@ public abstract class BaseType {
 
         final List<String> targets = new ArrayList<>();
 
+        if (StringUtils.isNotBlank(listenerMapping.input())) {
+            this.input = listenerMapping.input();
+        }
+
         String defaultTarget = this.input.replace("in", "out");
         if (listenerMapping.targets() != null && listenerMapping.targets().length > 0) {
             targets.addAll(Arrays.asList(listenerMapping.targets()));

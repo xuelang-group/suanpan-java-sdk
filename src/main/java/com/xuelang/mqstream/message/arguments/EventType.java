@@ -39,7 +39,7 @@ public class EventType extends BaseType {
     @Override
     public Boolean isAsyncDealMessage(Map<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> mappingCache) {
         for (Map.Entry<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> entry : mappingCache.entrySet()) {
-            if ((StringUtils.isBlank(entry.getKey().input()) || entry.getKey().input().equals(super.getInput()))
+            if (super.getInput().equals(entry.getKey().input())
                     && entry.getKey().event().equals(this.event)) {
                 return entry.getKey().async();
             }
@@ -54,7 +54,7 @@ public class EventType extends BaseType {
         DefaultMessageRecvHandler.DealMsgInvokeObj dealMsgInvokeObj = null;
 
         for (Map.Entry<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> entry : mappingCache.entrySet()) {
-            if ((StringUtils.isBlank(entry.getKey().input()) || entry.getKey().input().equals(super.getInput()))
+            if (super.getInput().equals(entry.getKey().input())
                     && entry.getKey().event().equals(this.event)) {
                 dealMsgInvokeObj = entry.getValue();
                 listenerMapping = entry.getKey();

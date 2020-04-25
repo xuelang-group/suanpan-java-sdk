@@ -3,9 +3,9 @@ package com.xuelang.mqstream.message.arguments;
 import java.util.ArrayList;
 import java.util.List;
 
-class AppRelations {
+public class AppRelations {
 
-    static final List<String> inputs = new ArrayList<>();
+    public static final List<String> inputs = new ArrayList<>();
 
     //预设20个输入
     static {

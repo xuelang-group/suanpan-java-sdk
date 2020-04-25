@@ -12,14 +12,14 @@ public @interface BussinessListenerMapping {
      *
      * @return
      */
-    String input() default "";
+    String input() default "in1";
 
     /**
      * 出口
      *
      * @return
      */
-    String[] targets() default {};
+    String[] targets() default {"out1"};
 
     /**
      * 是否异步

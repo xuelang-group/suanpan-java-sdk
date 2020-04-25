@@ -95,18 +95,6 @@ public abstract class BaseType {
             targets.add(defaultTarget);
         }
 
-        if (null == listenerMapping || null == dealMsgInvokeObj) {
-            String msg = "没有找到处理方法，消息将丢失";
-            log.error(msg);
-            MqSendServiceFactory.getMqSendService().sendErrorMessageToTarget(
-                    targets,
-                    msg,
-                    this.extra,
-                    this.requestId
-            );
-            return;
-        }
-
         try {
             Method method = dealMsgInvokeObj.getMethod();
             int count = method.getParameterCount();

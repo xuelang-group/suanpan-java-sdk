@@ -4,7 +4,6 @@ import com.xuelang.mqstream.handler.DefaultMessageRecvHandler;
 import com.xuelang.mqstream.handler.annotation.BussinessListenerMapping;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
@@ -31,7 +30,7 @@ public class CommonType extends BaseType {
     public Boolean isAsyncDealMessage(Map<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> mappingCache) {
 
         for (Map.Entry<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> entry : mappingCache.entrySet()) {
-            if (StringUtils.isBlank(entry.getKey().input()) || entry.getKey().input().equals(super.getInput())) {
+            if (super.getInput().equals(entry.getKey().input())) {
                 return entry.getKey().async();
             }
         }
@@ -50,7 +49,7 @@ public class CommonType extends BaseType {
         DefaultMessageRecvHandler.DealMsgInvokeObj dealMsgInvokeObj = null;
 
         for (Map.Entry<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> entry : mappingCache.entrySet()) {
-            if (StringUtils.isBlank(entry.getKey().input()) || entry.getKey().input().equals(super.getInput())) {
+            if (super.getInput().equals(entry.getKey().input())) {
                 dealMsgInvokeObj = entry.getValue();
                 listenerMapping = entry.getKey();
                 break;

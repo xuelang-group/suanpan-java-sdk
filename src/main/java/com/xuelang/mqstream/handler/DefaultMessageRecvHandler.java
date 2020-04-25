@@ -2,6 +2,7 @@ package com.xuelang.mqstream.handler;
 
 import com.google.common.collect.Maps;
 import com.xuelang.mqstream.handler.annotation.BussinessListenerMapping;
+import com.xuelang.mqstream.message.arguments.AppRelations;
 import com.xuelang.mqstream.message.arguments.BaseType;
 import com.xuelang.mqstream.response.XReadGroupResponse;
 import lombok.Data;
@@ -9,8 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -71,17 +71,37 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
         }
 
         for (Map<String, String> message : messages) {
+            List<String> inputs = new ArrayList<>();
 
-            BaseType baseType;
-
-            try {
-                baseType = (BaseType) declaredConstructor.newInstance(message);
-            } catch (Exception e) {
-                log.error("消息类型转换错误", e);
-                continue;
+            for (Map.Entry<String, String> entry : message.entrySet()) {
+                String key = entry.getKey();
+                if (AppRelations.inputs.contains(key)) {
+                    inputs.add(key);
+                }
             }
 
-            dispatchEvent(baseType);
+            for (String input : inputs) {
+                Map<String, String> formatMessage = new HashMap<>();
+                formatMessage.putAll(message);
+                Iterator<Map.Entry<String, String>> iterator = formatMessage.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry<String, String> next = iterator.next();
+                    String key = next.getKey();
+                    if (AppRelations.inputs.contains(key) && !Objects.equals(input, key)) {
+                        iterator.remove();
+                    }
+                }
+                BaseType baseType;
+
+                try {
+                    baseType = (BaseType) declaredConstructor.newInstance(formatMessage);
+                } catch (Exception e) {
+                    log.error("消息类型转换错误", e);
+                    continue;
+                }
+
+                dispatchEvent(baseType);
+            }
         }
     }
 

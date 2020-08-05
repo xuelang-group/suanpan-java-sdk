@@ -11,24 +11,24 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MqClientFactory {
 
+    private static MqClient mqClient = null;
+
     private MqClientFactory() {
     }
 
     public static MqClient getMqClient() {
-        return getMqClient(GlobalConfig.mqRedisHost, GlobalConfig.mqRedisPort,  GlobalConfig.mqType);
+        return getMqClient(GlobalConfig.mqRedisHost, GlobalConfig.mqRedisPort, GlobalConfig.mqType);
     }
 
     public static MqClient getMqClient(String host, Integer port, String mqType) {
-        MqClient mqClient = new RedisStreamMqClient(host, port);
-        if ("redis".equals(mqType)) {
+        if (null == mqClient) {
             mqClient = new RedisStreamMqClient(host, port);
         }
         return mqClient;
     }
 
     public static MqClient getMqClient(String host, Integer port, String password, String mqType) {
-        MqClient mqClient = new RedisStreamMqClient(host, port, password);
-        if ("redis".equals(mqType)) {
+        if (null == mqClient) {
             mqClient = new RedisStreamMqClient(host, port, password);
         }
         return mqClient;

@@ -12,18 +12,16 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 /**
- * @Auther: zigui.zdf
- * @Date: 2019/11/5 14:20
- * @Description:
+ * @author ellison
+ * @date 2020/8/4 12:20 下午
+ * @description: 接收消息服务
  */
 @Slf4j
 public class MessageRecvService {
 
-    private DefaultMessageRecvHandler defaultMessageRecvHandler;
-
     private ExecutorService executorService;
+    private DefaultMessageRecvHandler defaultMessageRecvHandler;
 
     public MessageRecvService(List<Object> businessListenerInstances, Class messageDataTypeClass) {
         defaultMessageRecvHandler = new DefaultMessageRecvHandler(businessListenerInstances, messageDataTypeClass);
@@ -39,7 +37,6 @@ public class MessageRecvService {
 
     /**
      * 使用自定义处理器来处理订阅到的消息
-     *
      * @param handler
      */
     public void subscribeMsg(XReadGroupHandler handler) {
@@ -58,7 +55,7 @@ public class MessageRecvService {
     }
 
     private void subscribeQueue(XReadGroupHandler handler) {
-        MqClient mqClient = MqClientFactory.getMqClient();
+        MqClient mqClient = MqClientFactory.getMqClient(GlobalConfig.mqType);
 
         Consumer consumer = Consumer.builder()
                 .queue(GlobalConfig.streamRecvQueue)

@@ -6,7 +6,6 @@ import com.aliyun.oss.model.ListObjectsRequest;
 import com.aliyun.oss.model.OSSObject;
 import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
-import com.xuelang.mqstream.api.OSSApi;
 import com.xuelang.mqstream.api.response.Credentials;
 import com.xuelang.mqstream.config.GlobalConfig;
 import lombok.extern.slf4j.Slf4j;

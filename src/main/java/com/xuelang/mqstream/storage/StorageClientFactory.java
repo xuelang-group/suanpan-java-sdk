@@ -9,25 +9,24 @@ import com.xuelang.mqstream.config.GlobalConfig;
  */
 public class StorageClientFactory {
 
-    private StorageClientFactory() {
-    }
+  private StorageClientFactory() { }
 
-    private volatile static StorageClient storageClient;
+  private volatile static StorageClient storageClient;
 
-    public static StorageClient getStorageClient() {
+  public static StorageClient getStorageClient() {
+    if (null == storageClient) {
+      synchronized (StorageClientFactory.class) {
         if (null == storageClient) {
-            synchronized (StorageClientFactory.class) {
-                if (null == storageClient) {
-                    if ("minio".equals(GlobalConfig.storageType)) {
-                        storageClient = new MinioStorageClient();
-                    } else if ("local".equals(GlobalConfig.storageType)) {
-                        storageClient = new LocalStorageClient();
-                    } else {
-                        storageClient = new OSSStorageClient();
-                    }
-                }
-            }
+          if ("minio".equals(GlobalConfig.storageType)) {
+            storageClient = new MinioStorageClient();
+          } else if ("local".equals(GlobalConfig.storageType)) {
+            storageClient = new LocalStorageClient();
+          } else {
+            storageClient = new OSSStorageClient();
+          }
         }
-        return storageClient;
+      }
     }
+    return storageClient;
+  }
 }

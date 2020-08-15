@@ -7,6 +7,7 @@ import com.xuelang.mqstream.message.arguments.BaseType;
 import com.xuelang.mqstream.response.XReadGroupResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -23,7 +24,6 @@ import java.util.concurrent.Executors;
 public class DefaultMessageRecvHandler implements XReadGroupHandler {
 
     private static ExecutorService asyncExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 2);
-
     private static ExecutorService syncExecutorService = Executors.newFixedThreadPool(1);
 
     private Map<BussinessListenerMapping, DealMsgInvokeObj> mappingCache = Maps.newHashMap();
@@ -34,8 +34,7 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
 
         this.messageDataTypeClass = messageDataTypeClass;
 
-        if (null != businessListenerInstances && businessListenerInstances.size() > 0) {
-
+        if (CollectionUtils.isNotEmpty(businessListenerInstances)) {
             for (Object instance : businessListenerInstances) {
                 Class c = instance.getClass();
 
@@ -123,9 +122,7 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
 
     @Data
     public static class DealMsgInvokeObj {
-
         private Method method;
-
         private Object object;
     }
 }

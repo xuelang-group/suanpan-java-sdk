@@ -27,7 +27,7 @@ public class RedisMqSendService implements MqSendService {
 
     @Override
     public String sendSuccessMessageToTarget(List<String> targets, String data, String extra, String requestId) {
-        MqClient mqClient = MqClientFactory.getMqClient();
+        MqClient mqClient = MqClientFactory.getMqClient(GlobalConfig.mqType);
 
         Message message = Message.builder()
                 .queue(GlobalConfig.streamSendQueue)
@@ -72,7 +72,7 @@ public class RedisMqSendService implements MqSendService {
 
     @Override
     public String sendErrorMessageToTarget(List<String> targets, String errorMessage, String extra, String requestId) {
-        MqClient client = MqClientFactory.getMqClient();
+        MqClient client = MqClientFactory.getMqClient(GlobalConfig.mqType);
         Message message = Message.builder()
                 .queue(GlobalConfig.streamSendQueue)
                 .keysAndValues(Message.prepareKeysAndValues(

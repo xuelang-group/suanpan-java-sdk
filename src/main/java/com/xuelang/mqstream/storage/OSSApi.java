@@ -1,4 +1,4 @@
-package com.xuelang.mqstream.api;
+package com.xuelang.mqstream.storage;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;

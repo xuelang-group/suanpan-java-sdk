@@ -1,6 +1,5 @@
 package com.xuelang.mqstream.storage;
 
-import com.xuelang.mqstream.api.OSSApi;
 import com.xuelang.mqstream.api.response.Credentials;
 import com.xuelang.mqstream.config.GlobalConfig;
 import io.minio.MinioClient;
@@ -10,20 +9,11 @@ import io.minio.messages.Item;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
-/**
- * @Auther: zigui.zdf
- * @Date: 2019/9/30 16:50
- * @Description:minio
- */
 @Slf4j
 public class MinioStorageClient implements StorageClient {
 

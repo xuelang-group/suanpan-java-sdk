@@ -3,34 +3,24 @@ package com.xuelang.mqstream;
 import com.xuelang.mqstream.config.GlobalConfig;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * @Auther: zigui.zdf
- * @Date: 2019/11/5 13:59
- * @Description:
+ * @author ellison
+ * @date 2020/8/6 12:43 上午
  */
 @Slf4j
 public class MqClientFactory {
 
-    private static MqClient mqClient = null;
+    private static final Map<String, MqClient> mqMap = new HashMap();
 
-    private MqClientFactory() {
-    }
-
-    public static MqClient getMqClient() {
-        return getMqClient(GlobalConfig.mqRedisHost, GlobalConfig.mqRedisPort, GlobalConfig.mqType);
-    }
-
-    public static MqClient getMqClient(String host, Integer port, String mqType) {
-        if (null == mqClient) {
-            mqClient = new RedisStreamMqClient(host, port);
+    public static synchronized MqClient getMqClient(String type) {
+        if (mqMap.containsKey(type)) {
+            return mqMap.get(type);
         }
-        return mqClient;
-    }
-
-    public static MqClient getMqClient(String host, Integer port, String password, String mqType) {
-        if (null == mqClient) {
-            mqClient = new RedisStreamMqClient(host, port, password);
-        }
+        MqClient mqClient = new RedisStreamMqClient(GlobalConfig.mqRedisHost, GlobalConfig.mqRedisPort);
+        mqMap.put(type, mqClient);
         return mqClient;
     }
 }

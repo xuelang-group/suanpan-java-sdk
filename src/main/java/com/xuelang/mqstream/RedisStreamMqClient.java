@@ -29,6 +29,8 @@ public class RedisStreamMqClient implements MqClient {
     private RedisClient client;
     private StatefulRedisConnection<String, String> connection;
 
+    public static final String SEARCH_MSG = "BUSYGROUP Consumer Group name already exists";
+
     public RedisStreamMqClient(String url) {
         this.client = RedisClient.create(url);
         this.connection = this.client.connect();
@@ -45,7 +47,7 @@ public class RedisStreamMqClient implements MqClient {
         this.client = RedisClient.create(uri);
         this.connection = this.client.connect();
     }
-
+    @Override
     public void createQueue(Queue queue, boolean existedOk) {
         RedisAsyncCommands<String, String> commands = this.connection.async();
         StringCodec codec = StringCodec.UTF8;
@@ -62,10 +64,7 @@ public class RedisStreamMqClient implements MqClient {
         try {
             future.get();
         } catch (ExecutionException e) {
-            if (
-                    existedOk &&
-                    StringUtils.containsIgnoreCase(e.getMessage(), "BUSYGROUP Consumer Group name already exists")
-            ) {
+            if (existedOk && StringUtils.containsIgnoreCase(e.getMessage(), SEARCH_MSG)) {
                 return;
             }
             throw new RuntimeException(e);
@@ -108,11 +107,9 @@ public class RedisStreamMqClient implements MqClient {
                 .add(consumer.getGroup())
                 .add(consumer.getName());
 
-        if (consumer.isNoAck())
-            args.add(CommandKeyword.NOACK);
-        if (consumer.isBlock()) {
-            args.add(CommandKeyword.BLOCK).add(0);
-        }
+        if (consumer.isNoAck()) { args.add(CommandKeyword.NOACK); }
+        if (consumer.isBlock()) { args.add(CommandKeyword.BLOCK).add(0); }
+
         args.add(CommandKeyword.COUNT)
                 .add(consumer.getCount())
                 .add("STREAMS")
@@ -151,10 +148,9 @@ public class RedisStreamMqClient implements MqClient {
         }
     }
 
+    @Override
     public void destroy() {
-        if (this.connection != null)
-            this.connection.close();
-        if (this.client != null)
-            this.client.shutdown();
+        if (this.connection != null){ this.connection.close(); }
+        if (this.client != null) { this.client.shutdown(); }
     }
 }

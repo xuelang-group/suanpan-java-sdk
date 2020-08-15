@@ -20,29 +20,17 @@ public class CommonType extends BaseType {
         super(message);
     }
 
-    /**
-     * 判断该消息是否需要异步处理
-     *
-     * @param mappingCache
-     * @return
-     */
     @Override
     public Boolean isAsyncDealMessage(Map<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> mappingCache) {
-
         for (Map.Entry<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> entry : mappingCache.entrySet()) {
             if (super.getInput().equals(entry.getKey().input())) {
                 return entry.getKey().async();
             }
         }
-
         return true;
     }
 
-    /**
-     * 消息处理
-     *
-     * @param mappingCache
-     */
+
     @Override
     public void dealMessageInvoke(Map<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> mappingCache) {
         BussinessListenerMapping listenerMapping = null;

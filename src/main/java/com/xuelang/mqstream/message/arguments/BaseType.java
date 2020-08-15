@@ -13,27 +13,23 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 /**
- * @Auther: zigui.zdf
- * @Date: 2019/11/7 09:00
- * @Description:自定义的消息类型都要继承该类
+ * @author ellison
+ * @date 2020/8/4 4:11 下午
+ * @description: 自定义的消息类型都要继承该类
  */
 @Data
 @Slf4j
 public abstract class BaseType {
 
     private String input;
-
     private String extra;
-
     private String requestId;
 
     private Map<String, String> message;
 
     BaseType(Map<String, String> message) {
         this.message = message;
-
         for (Map.Entry<String, String> entry : message.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue();
@@ -41,11 +37,9 @@ public abstract class BaseType {
             if (AppRelations.inputs.contains(key)) {
                 this.input = key;
             }
-
             if ("extra".equals(key) && StringUtils.isNotBlank(value)) {
                 this.extra = value;
             }
-
             if ("id".equals(key)) {
                 this.requestId = value;
             }
@@ -53,32 +47,30 @@ public abstract class BaseType {
     }
 
     /**
-     * 判断该消息是否需要异步处理
-     *
-     * @param mappingCache
-     * @return
+     * @description: 判断该消息是否需要异步处理
+     * @Param: [mappingCache]
+     * @return: java.lang.Boolean
      */
     public abstract Boolean isAsyncDealMessage(Map<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> mappingCache);
 
     /**
-     * 消息处理
-     *
-     * @param mappingCache
+     * @description: 消息处理
+     * @param: [mappingCache]
+     * @return: void
      */
     public abstract void dealMessageInvoke(Map<BussinessListenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj> mappingCache);
 
     /**
-     * 获取参数
-     *
-     * @return
+     * @description: 获取参数
+     * @param: []
+     * @return: java.lang.Object[]
      */
     public abstract Object[] getArgs();
 
-    /**
-     * 消息处理
-     *
-     * @param listenerMapping
-     * @param dealMsgInvokeObj
+    /** 消息处理
+     * @description:
+     * @param: [listenerMapping, dealMsgInvokeObj]
+     * @return: void
      */
     void dealMessageInvoke(BussinessListenerMapping listenerMapping, DefaultMessageRecvHandler.DealMsgInvokeObj dealMsgInvokeObj) {
 

@@ -55,7 +55,7 @@ public class MessageRecvService {
     }
 
     private void subscribeQueue(XReadGroupHandler handler) {
-        MqClient mqClient = MqClientFactory.getMqClient(GlobalConfig.mqType);
+        MqClient mqClient = MqClientFactory.getMqClient();
 
         Consumer consumer = Consumer.builder()
                 .queue(GlobalConfig.streamRecvQueue)

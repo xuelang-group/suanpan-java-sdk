@@ -3,9 +3,6 @@ package com.xuelang.mqstream;
 import com.xuelang.mqstream.config.GlobalConfig;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * @author ellison
  * @date 2020/8/6 12:43 上午
@@ -13,14 +10,27 @@ import java.util.Map;
 @Slf4j
 public class MqClientFactory {
 
-    private static final Map<String, MqClient> mqMap = new HashMap();
+    public static final String MQ_TYPE = "redis";
 
-    public static synchronized MqClient getMqClient(String type) {
-        if (mqMap.containsKey(type)) {
-            return mqMap.get(type);
+    private MqClientFactory() {
+    }
+
+    private volatile static MqClient mqClient;
+
+    public static MqClient getMqClient() {
+        return getMqClient(GlobalConfig.mqRedisHost, GlobalConfig.mqRedisPort, GlobalConfig.mqType);
+    }
+
+    public static MqClient getMqClient(String host, Integer port, String mqType) {
+        if (null == mqClient) {
+            synchronized (MqClientFactory.class) {
+                if (null == mqClient) {
+                    if (MQ_TYPE.equals(mqType)) {
+                        mqClient = new RedisStreamMqClient(host, port);
+                    }
+                }
+            }
         }
-        MqClient mqClient = new RedisStreamMqClient(GlobalConfig.mqRedisHost, GlobalConfig.mqRedisPort);
-        mqMap.put(type, mqClient);
         return mqClient;
     }
 }

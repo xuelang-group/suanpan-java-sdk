@@ -96,7 +96,7 @@ public final class GlobalConfig {
 
     public static String streamAppId = EnvUtil.get("SP_STREAM_APP_ID");
 
-    public static String streamNodeId = EnvUtil.get("SP_STREAM_NODE_ID");
+    public static String streamNodeId = EnvUtil.get("SP_NODE_ID");
 
     public static String streamHost = EnvUtil.get("SP_STREAM_HOST");
 

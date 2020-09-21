@@ -35,7 +35,7 @@ public final class GlobalConfig {
 
     public static String accessKey = EnvUtil.get("SP_ACCESS_KEY", null, true);
 
-    public static String accessSecret = EnvUtil.get("SP_ACCESS_SECRET", null, true);
+    public static String accessSecret = EnvUtil.get("SP_ACCESS_SECRET", null);
 
     public static String userIdHeaderField = EnvUtil.get("SP_USER_ID_HEADER_FIELD", "x-sp-user-id");
 

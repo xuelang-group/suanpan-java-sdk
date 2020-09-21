@@ -33,7 +33,7 @@ public final class GlobalConfig {
 
     public static String affinity = EnvUtil.get("SP_AFFINITY");
 
-    public static String accessKey = EnvUtil.get("SP_ACCESS_KEY", null, true);
+    public static String accessKey = EnvUtil.get("SP_ACCESS_KEY", null);
 
     public static String accessSecret = EnvUtil.get("SP_ACCESS_SECRET", null);
 

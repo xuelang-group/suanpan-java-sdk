@@ -59,7 +59,7 @@ public class RedisMqSendService implements MqSendService {
 
         log.info("send success message to {},message : {}", GlobalConfig.streamSendQueue, subMsg);
 
-        mqClient.destroy();
+        // mqClient.destroy();
 
         return result;
     }

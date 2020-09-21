@@ -23,11 +23,11 @@ public final class GlobalConfig {
     public static String nodeGroup = EnvUtil.get("SP_NODE_GROUP", "default");
 
     // Api
-    public static String host = EnvUtil.get("SP_HOST", null, true);
+    public static String host = EnvUtil.get("SP_HOST", null);
 
     public static Boolean hostTls = Boolean.valueOf(EnvUtil.get("SP_HOST_TLS", "false"));
 
-    public static String apiHost = EnvUtil.get("SP_API_HOST", null, true);
+    public static String apiHost = EnvUtil.get("SP_API_HOST", null);
 
     public static Boolean apiHostTls = Boolean.valueOf(EnvUtil.get("SP_API_HOST_TLS", "false"));
 

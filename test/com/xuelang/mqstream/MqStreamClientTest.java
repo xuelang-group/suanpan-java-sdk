@@ -17,14 +17,15 @@ public class MqStreamClientTest {
 
     @BeforeClass
     public static void setUp() {
-        mqClient = new RedisStreamMqClient("10.88.36.127", 6379);
+//        mqClient = new RedisStreamMqClient("10.88.36.127", 6379);
+        mqClient = new RedisStreamMqClient("127.0.0.1", 6379);
     }
 
     @Test
     public void test_create_queue() {
         Queue queue = Queue.builder()
-                .name("test_xw_queue")
-                .group("test_xw_group")
+                .name("q1")
+                .group("q1_g1")
                 .consumeId("$")
                 .build();
         mqClient.createQueue(queue, true);
@@ -33,8 +34,8 @@ public class MqStreamClientTest {
     @Test
     public void test_send_message() {
         Message message = Message.builder()
-                .queue("xw-recv")
-                .keysAndValues(Message.prepareKeysAndValues("node", "hello", "data", "cool"))
+                .queue("q1")
+                .keysAndValues(Message.prepareKeysAndValues("name", "libk", "f1", "v1"))
                 .build();
         String messageId = mqClient.sendMessage(message);
         System.out.println(messageId);
@@ -70,7 +71,7 @@ public class MqStreamClientTest {
     @Test
     public void test_subscribe_queue() {
         Consumer consumer = Consumer.builder()
-                .queue("xw-recv")
+                .queue("mystream")
                 .group("default")
                 .count(1)
                 .build();

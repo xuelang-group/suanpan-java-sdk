@@ -1,8 +1,8 @@
 package com.xuelang.mqstream;
 
-import com.xuelang.mqstream.api.OSSApi;
 import com.xuelang.mqstream.api.response.AccessKey;
 import com.xuelang.mqstream.api.response.Credentials;
+import com.xuelang.mqstream.storage.OSSApi;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

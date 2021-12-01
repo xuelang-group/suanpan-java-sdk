@@ -18,7 +18,7 @@ public class AffinityRequest extends CommonRequest {
 
         if (StringUtils.isNotBlank(GlobalConfig.host)) {
             String protocol = GlobalConfig.hostTls ? "https" : "http";
-            return String.format("%s://%s%s", protocol, GlobalConfig.host, path);
+            return String.format("%s://%s%s", protocol, GlobalConfig.host + ":" + GlobalConfig.port, path);
         }
 
         throw new IllegalArgumentException("Suanpan API call Error: affinity and host not set");

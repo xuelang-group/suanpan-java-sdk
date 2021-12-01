@@ -17,6 +17,6 @@ public class HostRequest extends CommonRequest {
         }
 
         String protocol = GlobalConfig.hostTls ? "https" : "http";
-        return String.format("%s://%s%s", protocol, GlobalConfig.host, path);
+        return String.format("%s://%s%s", protocol, GlobalConfig.host + ":" + GlobalConfig.port, path);
     }
 }

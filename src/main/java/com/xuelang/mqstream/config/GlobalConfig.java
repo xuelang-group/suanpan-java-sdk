@@ -25,6 +25,8 @@ public final class GlobalConfig {
     // Api
     public static String host = EnvUtil.get("SP_HOST", null);
 
+    public  static String port =EnvUtil.get("SP_PORT",null);
+
     public static Boolean hostTls = Boolean.valueOf(EnvUtil.get("SP_HOST_TLS", "false"));
 
     public static String apiHost = EnvUtil.get("SP_API_HOST", null);
@@ -125,4 +127,12 @@ public final class GlobalConfig {
     public static String spDockerRegistryHost = EnvUtil.get("SP_DOCKER_REGISTRY_HOST");
 
     public static String spServiceDockerRegistryUrl = EnvUtil.get("SP_SERVICE_DOCKER_REGISTRY_URL");
+
+    public static final int defaultLogicPort = 8002;
+    public static final int logicPort = Integer.valueOf(EnvUtil.get("APP_NODE_SDK_PORT_CONFIG", GlobalConfig.defaultLogicPort + "", false));
+
+    public static final int startPort = Integer.valueOf(EnvUtil.get("SP_PORT_START", "50000", true));
+    public static final int endPort = Integer.valueOf(EnvUtil.get("SP_PORT_END", "60000", true));
+
+
 }

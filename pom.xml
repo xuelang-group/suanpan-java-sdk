@@ -2,10 +2,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>com.xuelang</groupId>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.6.0</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.xuelangcloud</groupId>
     <artifactId>suanpan-java-sdk</artifactId>
-    <version>2.0.8</version>
+    <version>2.0.10</version>
     <packaging>jar</packaging>
     <name>mq-stream</name>
 
@@ -104,22 +109,54 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot</artifactId>
-            <version>2.6.0</version>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>5.3.13</version>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <version>2.5.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.socket</groupId>
+            <artifactId>socket.io-client</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+
+
+
     </dependencies>
 
     <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
         <repository>
-            <id>internal.repo</id>
-            <name>Temporary Staging Repository</name>
-            <url>file://${project.build.directory}/mvn-repo</url>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
 
+
     <build>
         <plugins>
+
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -130,47 +167,130 @@
                 </configuration>
             </plugin>
             <!--1.作用：将jar deploy(发布)到本地储存库位置(altDeploymentRepository) -->
-            <plugin>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>2.8.2</version>
-                <configuration>
-                    <altDeploymentRepository>
-                        repo.stage::default::file://${project.build.directory}/repo-stage
-                    </altDeploymentRepository>
-                </configuration>
-            </plugin>
+<!--            <plugin>-->
+<!--                <artifactId>maven-deploy-plugin</artifactId>-->
+<!--                <version>2.8.2</version>-->
+<!--                <configuration>-->
+<!--                    <altDeploymentRepository>-->
+<!--                        repo.stage::default::file://${project.build.directory}/repo-stage-->
+<!--                    </altDeploymentRepository>-->
+<!--                </configuration>-->
+<!--            </plugin>-->
             <!--2.作用：将本地存储库位置的jar文件发布到 github上 -->
+<!--            <plugin>-->
+<!--                <groupId>com.github.github</groupId>-->
+<!--                <artifactId>site-maven-plugin</artifactId>-->
+<!--                <version>0.12</version>-->
+<!--                <configuration>-->
+<!--                    &lt;!&ndash; Github settings &ndash;&gt;-->
+<!--                    <server>github</server>-->
+<!--                    <repositoryName>suanpan-java-sdk</repositoryName>-->
+<!--                    <repositoryOwner>xuelang-group</repositoryOwner>-->
+<!--                    &lt;!&ndash;远程分支名&ndash;&gt;-->
+<!--                    <branch>refs/heads/mvn-repo</branch>-->
+<!--                    &lt;!&ndash;                    <message>Artifacts for ${project.name}/${project.artifactId}/${project.version}</message>&ndash;&gt;-->
+<!--                    &lt;!&ndash;git 提交的消息&ndash;&gt;-->
+<!--                    <message>Maven artifacts for ${project.version}</message>-->
+<!--                    <noJekyll>true</noJekyll>-->
+<!--                    &lt;!&ndash;部署的目录，这里是和上面的 maven-deploy-plugin 的 configuration.altDeploymentRepository 对应&ndash;&gt;-->
+<!--                    <outputDirectory>${project.build.directory}/repo-stage</outputDirectory>-->
+<!--                    <includes>-->
+<!--                        <include>**/*</include>-->
+<!--                    </includes>-->
+<!--                </configuration>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <phase>deploy</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>site</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
+
+
+            <!-- Javadoc -->
             <plugin>
-                <groupId>com.github.github</groupId>
-                <artifactId>site-maven-plugin</artifactId>
-                <version>0.12</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9.1</version>
                 <configuration>
-                    <!-- Github settings -->
-                    <server>github</server>
-                    <repositoryName>suanpan-java-sdk</repositoryName>
-                    <repositoryOwner>xuelang-group</repositoryOwner>
-                    <!--远程分支名-->
-                    <branch>refs/heads/mvn-repo</branch>
-<!--                    <message>Artifacts for ${project.name}/${project.artifactId}/${project.version}</message>-->
-                    <!--git 提交的消息-->
-                    <message>Maven artifacts for ${project.version}</message>
-                    <noJekyll>true</noJekyll>
-                    <!--部署的目录，这里是和上面的 maven-deploy-plugin 的 configuration.altDeploymentRepository 对应-->
-                    <outputDirectory>${project.build.directory}/repo-stage</outputDirectory>
-                    <includes>
-                        <include>**/*</include>
-                    </includes>
+                    <show>private</show>
+                    <nohelp>true</nohelp>
+                    <charset>UTF-8</charset>
+                    <encoding>UTF-8</encoding>
+                    <docencoding>UTF-8</docencoding>
+                    <additionalparam>-Xdoclint:none</additionalparam>
                 </configuration>
                 <executions>
                     <execution>
-                        <phase>deploy</phase>
+                        <phase>package</phase>
                         <goals>
-                            <goal>site</goal>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- GPG -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>2.2.1</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>2.9.1</version>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
+
+
+
     </build>
 
 </project>

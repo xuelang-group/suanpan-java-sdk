@@ -134,5 +134,11 @@ public final class GlobalConfig {
     public static final int startPort = Integer.valueOf(EnvUtil.get("SP_PORT_START", "50000", true));
     public static final int endPort = Integer.valueOf(EnvUtil.get("SP_PORT_END", "60000", true));
 
+    //logkit
+    public static final String logKitUrl = EnvUtil.get("SP_LOGKIT_URI", null, false);
+    public static final String logKitLevel = EnvUtil.get("SP_LOGKIT_LOGS_LEVEL", "debug", false);
+    public static final String logKitNamespace = EnvUtil.get("SP_LOGKIT_NAMESPACE", "logkit", false);
+    public static final String logKitEvent = EnvUtil.get("SP_LOGKIT_EVENTS_APPEND", "append", false);
+    public static final String logKitPath = EnvUtil.get("SP_LOGKIT_PATH", null, false);
 
 }

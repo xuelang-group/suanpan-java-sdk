@@ -26,7 +26,7 @@ public abstract class CommonRequest {
      * @param data
      * @return
      */
-    private String signatureV1(String key, String data) {
+    public static String signatureV1(String key, String data) {
         byte[] result = null;
         try {
             String HMAC_SHA1_ALGORITHM = "HmacSHA1";

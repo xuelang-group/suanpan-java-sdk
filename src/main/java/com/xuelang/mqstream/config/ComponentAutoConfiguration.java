@@ -1,5 +1,6 @@
 package com.xuelang.mqstream.config;
 
+import com.xuelang.mqstream.common.CommonUtil;
 import com.xuelang.service.PortService;
 import com.xuelang.service.logkit.EventLogger;
 import lombok.extern.slf4j.Slf4j;
@@ -17,16 +18,19 @@ public class ComponentAutoConfiguration {
      */
     @Bean
     public WebServerFactoryCustomizer webServerFactoryCustomizer() {
-        return new WebServerFactoryCustomizer<ConfigurableWebServerFactory>() {
-            @Override
-            public void customize(ConfigurableWebServerFactory factory) {
-                PortService registerPort = new PortService();
+        if(CommonUtil.isWindows()){
+            return new WebServerFactoryCustomizer<ConfigurableWebServerFactory>() {
+                @Override
+                public void customize(ConfigurableWebServerFactory factory) {
+                    PortService registerPort = new PortService();
 
-                int realPort = registerPort.registerServicePortUntilSuccess(GlobalConfig.logicPort);
-                log.info("set Server Port {}", realPort);
-                factory.setPort(realPort);
-            }
-        };
+                    int realPort = registerPort.registerServicePortUntilSuccess(GlobalConfig.logicPort);
+                    log.info("set Server Port {}", realPort);
+                    factory.setPort(realPort);
+                }
+            };
+        }
+        return null;
     }
 
     /**

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 @Slf4j
 public class PortService {
@@ -27,15 +28,19 @@ public class PortService {
     }
 
     private int getFreePort() {
-        for (int i = this.startPort; i <= this.endPort; i++) {
+        int randNumber = -1;
+        do {
             try {
-                new ServerSocket(i).close();
-                return i;
+                Random rand = new Random();
+                randNumber = rand.nextInt(this.endPort - this.startPort + 1) + this.startPort;
+                new ServerSocket(randNumber).close();
+                break;
             } catch (IOException e) {
                 continue;
             }
-        }
-        return -1;
+        } while (true);
+        log.debug("get free port {}",randNumber);
+        return randNumber;
     }
 
     public boolean registerServicePort(int logicPort, int realPort) {

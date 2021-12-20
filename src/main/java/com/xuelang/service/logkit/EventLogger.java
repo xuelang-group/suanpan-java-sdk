@@ -1,5 +1,6 @@
 package com.xuelang.service.logkit;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.xuelang.mqstream.api.requests.CommonRequest;
 import com.xuelang.mqstream.config.GlobalConfig;
@@ -7,6 +8,9 @@ import io.socket.client.Ack;
 import io.socket.client.IO;
 import io.socket.client.Socket;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+import org.slf4j.helpers.BasicMarker;
 
 import java.net.URI;
 import java.util.*;
@@ -47,27 +51,27 @@ public class EventLogger {
     }
 
     public void trace(String msg, Object... params) {
-        log.trace(msg, params);
+        log.trace(callMarker() + msg, params);
         this.emitEventLog(buildEventLog(TRACE, msg, params));
     }
 
     public void debug(String msg, Object... params) {
-        log.debug(msg, params);
+        log.debug(callMarker() + msg, params);
         this.emitEventLog(buildEventLog(DEBUG, msg, params));
     }
 
     public void info(String msg, Object... params) {
-        log.info(msg, params);
-        this.emitEventLog(buildEventLog(INFO, msg));
+        log.info(callMarker() + msg, params);
+        this.emitEventLog(buildEventLog(INFO, msg, params));
     }
 
     public void warn(String msg, Object... params) {
-        log.warn(msg, params);
+        log.warn(callMarker() + msg, params);
         this.emitEventLog(buildEventLog(WARN, msg, params));
     }
 
     public void error(String msg, Object... params) {
-        log.error(msg, params);
+        log.error(callMarker() + msg, params);
         this.emitEventLog(buildEventLog(ERROR, msg, params));
     }
 
@@ -90,8 +94,12 @@ public class EventLogger {
         JSONObject eventLog = new JSONObject();
         JSONObject data = new JSONObject();
         data.put("node", GlobalConfig.nodeId);
+        if (null == params || JSONArray.parseArray(JSONObject.toJSONString(params)).size() == 0) {
+            eventLog.put("title", msg);
+        } else {
+            eventLog.put("title", String.format(msg.replaceAll("\\{\\}", "%s"), params));
 
-        eventLog.put("title", String.format(msg, params));
+        }
         eventLog.put("level", logLevel);
         eventLog.put("time", new Date().toString());
         eventLog.put("data", data);
@@ -105,5 +113,13 @@ public class EventLogger {
         endPoint = endPoint.endsWith("/") ? endPoint : String.format("%s/", endPoint);
         nsp = nsp.startsWith("/") ? nsp.substring(1) : nsp;
         return endPoint + nsp;
+    }
+
+    private String callMarker() {
+        String className = Thread.currentThread().getStackTrace()[3].getClassName();//调用的类名
+        String methodName = Thread.currentThread().getStackTrace()[3].getMethodName();//调用的方法名
+        int lineNumber = Thread.currentThread().getStackTrace()[3].getLineNumber();//调用的行数
+        return className + ":" + methodName + "[" + lineNumber + "]: ";
+//        return MarkerFactory.getMarker(className+":"+methodName+"["+lineNumber+"] ");
     }
 }

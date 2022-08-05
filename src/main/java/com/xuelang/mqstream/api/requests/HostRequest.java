@@ -1,5 +1,6 @@
 package com.xuelang.mqstream.api.requests;
 
+import com.xuelang.mqstream.common.CommonUtil;
 import com.xuelang.mqstream.config.GlobalConfig;
 import org.apache.commons.lang3.StringUtils;
 
@@ -17,6 +18,9 @@ public class HostRequest extends CommonRequest {
         }
 
         String protocol = GlobalConfig.hostTls ? "https" : "http";
-        return String.format("%s://%s%s", protocol, GlobalConfig.host + ":" + GlobalConfig.port, path);
+        if(CommonUtil.isWindows()){
+         return String.format("%s://%s%s", protocol, GlobalConfig.host + ":" + GlobalConfig.port, path);
+        }
+        return String.format("%s://%s%s", protocol, GlobalConfig.host, path);
     }
 }

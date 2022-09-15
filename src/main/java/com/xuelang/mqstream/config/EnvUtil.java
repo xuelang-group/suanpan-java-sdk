@@ -1,5 +1,6 @@
 package com.xuelang.mqstream.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Base64;
@@ -11,6 +12,7 @@ import java.util.Map;
  * @Date: 2019/11/4 14:13
  * @Description:
  */
+@Slf4j
 public class EnvUtil {
 
     private static String spParam = StringUtils.isNotBlank(System.getenv("SP_PARAM")) ? new String(Base64.getDecoder().decode(System.getenv("SP_PARAM"))) : null;
@@ -18,6 +20,7 @@ public class EnvUtil {
     private static Map<String, String> spParamMap = new HashMap<>();
 
     static {
+        log.info("********** 加载环境变量 **********");
         if (StringUtils.isNotBlank(spParam)) {
             String[] kvs = spParam.split("--");
             for (String kv : kvs) {

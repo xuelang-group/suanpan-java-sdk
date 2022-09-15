@@ -7,11 +7,11 @@ import java.util.List;
  */
 public interface MqSendService {
 
-    String sendSuccessMessageToTarget(String target, String data, String extra, String requestId);
+    String sendSuccessMessageToTarget(String target, Object data, String extra, String requestId);
 
-    String sendSuccessMessageToTarget(List<String> targets, String data, String extra, String requestId);
+    String sendSuccessMessageToTarget(List<String> targets, Object data, String extra, String requestId);
 
-    String sendErrorMessageToTarget(String target, String errorMessage, String extra, String requestId);
+    String sendErrorMessageToTarget(String target, Object errorMessage, String extra, String requestId);
 
-    String sendErrorMessageToTarget(List<String> targets, String errorMessage, String extra, String requestId);
+    String sendErrorMessageToTarget(List<String> targets, Object errorMessage, String extra, String requestId);
 }

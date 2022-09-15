@@ -1,5 +1,6 @@
 package com.xuelang.mqstream.message;
 
+import com.alibaba.fastjson.JSON;
 import com.xuelang.mqstream.MqClient;
 import com.xuelang.mqstream.MqClientFactory;
 import com.xuelang.mqstream.config.GlobalConfig;
@@ -20,13 +21,13 @@ import java.util.List;
 public class RedisMqSendService implements MqSendService {
 
     @Override
-    public String sendSuccessMessageToTarget(String target, String data, String extra, String requestId) {
+    public String sendSuccessMessageToTarget(String target, Object data, String extra, String requestId) {
         List<String> targets = Collections.singletonList(target);
         return sendSuccessMessageToTarget(targets, data, extra, requestId);
     }
 
     @Override
-    public String sendSuccessMessageToTarget(List<String> targets, String data, String extra, String requestId) {
+    public String sendSuccessMessageToTarget(List<String> targets, Object data, String extra, String requestId) {
         MqClient mqClient = MqClientFactory.getMqClient();
 
         Message message = Message.builder()
@@ -44,7 +45,7 @@ public class RedisMqSendService implements MqSendService {
 
         targets.forEach(target -> {
             keysAndValues.add(target);
-            keysAndValues.add(data);
+            keysAndValues.add(JSON.toJSONString(data).replaceAll("^\"+|\"+$", ""));
         });
 
         message.setKeysAndValues(keysAndValues.toArray(new String[0]));
@@ -65,13 +66,13 @@ public class RedisMqSendService implements MqSendService {
     }
 
     @Override
-    public String sendErrorMessageToTarget(String target, String errorMessage, String extra, String requestId) {
+    public String sendErrorMessageToTarget(String target, Object errorMessage, String extra, String requestId) {
         List<String> targets = Collections.singletonList(target);
         return sendErrorMessageToTarget(targets, errorMessage, extra, requestId);
     }
 
     @Override
-    public String sendErrorMessageToTarget(List<String> targets, String errorMessage, String extra, String requestId) {
+    public String sendErrorMessageToTarget(List<String> targets, Object errorMessage, String extra, String requestId) {
         MqClient client = MqClientFactory.getMqClient();
         Message message = Message.builder()
                 .queue(GlobalConfig.streamSendQueue)

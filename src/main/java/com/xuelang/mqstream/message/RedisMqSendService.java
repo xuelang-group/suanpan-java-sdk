@@ -87,7 +87,7 @@ public class RedisMqSendService implements MqSendService {
 
         String result = client.sendMessage(message);
         log.info("send error message to {},message : {}", GlobalConfig.streamSendQueue, message);
-        client.destroy();
+//        client.destroy();
 
         return result;
     }

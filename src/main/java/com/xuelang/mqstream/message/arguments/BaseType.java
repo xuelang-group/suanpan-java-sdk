@@ -28,6 +28,8 @@ public abstract class BaseType {
 
     private Map<String, String> message;
 
+    public BaseType(){}
+
     BaseType(Map<String, String> message) {
         this.message = message;
         for (Map.Entry<String, String> entry : message.entrySet()) {

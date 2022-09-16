@@ -156,6 +156,10 @@ public class RedisStreamMqClient implements MqClient {
     @Override
     public void destroy() {
         if (this.recvConnection != null){ this.recvConnection.close(); }
+        if (this.sendConnection != null){
+            this.sendConnection.close();
+        }
+
         if (this.client != null) { this.client.shutdown(); }
     }
 }

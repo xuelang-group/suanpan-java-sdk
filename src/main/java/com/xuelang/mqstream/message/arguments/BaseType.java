@@ -99,12 +99,12 @@ public abstract class BaseType {
                 obj = method.invoke(dealMsgInvokeObj.getObject(), getArgs());
             }
             if (listenerMapping.defaultSendResp()) {
-                String data = "";
+                Object data = null;
                 if (null != obj) {
                     try {
-                        data = JSON.toJSONString(obj);
+                        data = obj;
                     } catch (Exception e) {
-                        data = obj.toString();
+                        data = obj;
                     }
                 }
                 MqSendServiceFactory.getMqSendService().sendSuccessMessageToTarget(

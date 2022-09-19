@@ -4,8 +4,8 @@ import com.alibaba.fastjson.JSON;
 import com.xuelang.mqstream.api.requests.AffinityRequest;
 import com.xuelang.mqstream.config.GlobalConfig;
 import com.xuelang.mqstream.entity.RegisterPortResponse;
-import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -48,9 +48,9 @@ public class PortService {
         AffinityRequest request = new AffinityRequest();
         Map<String, Object> data = new HashMap<>();
 
-        data.put("userId", StringUtil.isNullOrEmpty(GlobalConfig.streamUserId) ? GlobalConfig.userId : GlobalConfig.streamUserId);
-        data.put("appId", StringUtil.isNullOrEmpty(GlobalConfig.streamAppId) ? GlobalConfig.appId : GlobalConfig.streamAppId);
-        data.put("nodeId", StringUtil.isNullOrEmpty(GlobalConfig.streamNodeId) ? GlobalConfig.nodeId : GlobalConfig.streamNodeId);
+        data.put("userId", StringUtils.isBlank(GlobalConfig.streamUserId) ? GlobalConfig.userId : GlobalConfig.streamUserId);
+        data.put("appId", StringUtils.isBlank(GlobalConfig.streamAppId) ? GlobalConfig.appId : GlobalConfig.streamAppId);
+        data.put("nodeId", StringUtils.isBlank(GlobalConfig.streamNodeId) ? GlobalConfig.nodeId : GlobalConfig.streamNodeId);
         data.put("nodePort", logicPort);
         data.put("port", realPort);
 

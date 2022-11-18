@@ -2,12 +2,10 @@ package com.xuelang.mqstream.storage;
 
 import com.xuelang.mqstream.api.response.Credentials;
 import com.xuelang.mqstream.config.GlobalConfig;
-import io.minio.MinioClient;
-import io.minio.Result;
+import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.Item;
 import lombok.extern.slf4j.Slf4j;
-
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
@@ -32,11 +30,7 @@ public class MinioStorageClient implements StorageClient {
         Credentials credentials = ossApi.getToken();
         try {
             if (null != credentials) {
-                minioClient = new MinioClient(
-                        GlobalConfig.minioEndpoint,
-                        credentials.getAccessKeyId(),
-                        credentials.getAccessKeySecret(),
-                        GlobalConfig.minioSecure);
+                minioClient = MinioClient.builder().endpoint(GlobalConfig.minioEndpoint).credentials(credentials.getAccessKeyId(), credentials.getAccessKeySecret()).build();
                 log.info("minio client 创建成功");
             } else {
                 log.error("获取ak失败");
@@ -57,7 +51,8 @@ public class MinioStorageClient implements StorageClient {
         List<ObjectSummary> summaries = new ArrayList<>();
 
         try {
-            Iterable<Result<Item>> results = minioClient.listObjects(bucketName, prefix);
+            ListObjectsArgs args = ListObjectsArgs.builder().bucket(bucketName).prefix(prefix).build();
+            Iterable<Result<Item>> results = minioClient.listObjects(args);
             Iterator<Result<Item>> iterator = results.iterator();
             while (iterator.hasNext()) {
                 Result<Item> next = iterator.next();
@@ -77,7 +72,8 @@ public class MinioStorageClient implements StorageClient {
         List<ObjectSummary> summaries = new ArrayList<>();
 
         try {
-            Iterable<Result<Item>> results = minioClient.listObjects(bucketName, prefix, recursive);
+            ListObjectsArgs args = ListObjectsArgs.builder().bucket(bucketName).prefix(prefix).recursive(recursive).build();
+            Iterable<Result<Item>> results = minioClient.listObjects(args);
             Iterator<Result<Item>> iterator = results.iterator();
             while (iterator.hasNext()) {
                 Result<Item> next = iterator.next();
@@ -95,7 +91,8 @@ public class MinioStorageClient implements StorageClient {
     @Override
     public void deleteObject(String bucketName, String key) {
         try {
-            minioClient.removeObject(bucketName, key);
+            RemoveObjectArgs args = RemoveObjectArgs.builder().bucket(bucketName).object(key).build();
+            minioClient.removeObject(args);
         } catch (Exception e) {
             log.error("", e);
         }
@@ -104,7 +101,8 @@ public class MinioStorageClient implements StorageClient {
     @Override
     public void putObject(String bucketName, String key, InputStream input) {
         try {
-            minioClient.putObject(bucketName, key, input, null, null, null, null);
+            PutObjectArgs put = PutObjectArgs.builder().bucket(bucketName).object(key).stream(input, input.available(), input.available()).build();
+            minioClient.putObject(put);
         } catch (Exception e) {
             log.error("", e);
         }
@@ -115,7 +113,8 @@ public class MinioStorageClient implements StorageClient {
         long millMinus = expiration.getTime() - new Date().getTime();
 
         try {
-            return minioClient.getPresignedObjectUrl(Method.GET, bucketName, key, Integer.parseInt(Long.toString(millMinus / 1000)), null);
+            GetPresignedObjectUrlArgs args = GetPresignedObjectUrlArgs.builder().method(Method.GET).bucket(bucketName).object(key).expiry(Integer.parseInt(Long.toString(millMinus / 1000))).build();
+            return minioClient.getPresignedObjectUrl(args);
         } catch (Exception e) {
             log.error("", e);
         }
@@ -126,7 +125,7 @@ public class MinioStorageClient implements StorageClient {
     @Override
     public boolean doesObjectExist(String bucketName, String key) {
         try {
-            minioClient.getObject(bucketName, key);
+            minioClient.getObject(GetObjectArgs.builder().bucket(bucketName).object(key).build());
             return true;
         } catch (Exception e) {
             log.error("", e);
@@ -137,7 +136,7 @@ public class MinioStorageClient implements StorageClient {
     @Override
     public InputStream getObject(String bucketName, String key) {
         try {
-            return minioClient.getObject(bucketName, key);
+            return minioClient.getObject(GetObjectArgs.builder().bucket(bucketName).object(key).build());
         } catch (Exception e) {
             log.error("", e);
         }

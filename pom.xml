@@ -299,7 +299,19 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <createDependencyReducedPom>true</createDependencyReducedPom>
+                            <!-- 过滤器排除配置文件-->
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <includes>
+                                        <include>com/xuelang/**</include>
+                                        <include>example/**</include>
+                                        <include>io/minio/**</include>
+                                        <include>shaded/**</include>
+                                        <include>META-INF/maven/com.xuelangcloud/**</include>
+                                    </includes>
+                                </filter>
+                            </filters>
                             <relocations>
                                 <relocation>
                                     <!-- 原依赖路径 -->

@@ -1,6 +1,7 @@
 package com.xuelang.mqstream.config;
 
 import com.xuelang.mqstream.common.CommonUtil;
+import com.xuelang.service.NodeSiblingService;
 import com.xuelang.service.PortService;
 import com.xuelang.service.logkit.EventLogger;
 import lombok.extern.slf4j.Slf4j;
@@ -39,5 +40,16 @@ public class ComponentAutoConfiguration {
     @Bean
     public EventLogger eventLogger() {
         return new EventLogger();
+    }
+
+    /***
+     *服务发现service
+     */
+    @Bean
+    public NodeSiblingService nodeSiblingService() {
+        if (!CommonUtil.isWindows()) {
+            return new NodeSiblingService();
+        }
+        return null;
     }
 }

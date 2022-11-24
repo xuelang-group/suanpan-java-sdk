@@ -4,9 +4,9 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.xuelang.mqstream.api.requests.AffinityRequest;
 import com.xuelang.mqstream.config.GlobalConfig;
+import com.xuelang.mqstream.entity.GraphConnection;
 import com.xuelang.mqstream.entity.Graph;
 import com.xuelang.service.util.OkHttpUtil;
-import lombok.extern.flogger.Flogger;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +28,7 @@ public class NodeSiblingService {
             if (jsonObject.getObject("success", Boolean.class)) {
                 String graphJsonStr = jsonObject.getJSONObject("data").getJSONObject("graphJsonStr").toJSONString();
                 JSONObject graphJson = JSONObject.parseObject(graphJsonStr);
-                Graph graph = new Graph.Builder().processes(graphJson.getJSONObject("processes")).connections(graphJson.getJSONArray("connections")).build();
+                Graph graph = Graph.builder().processes(graphJson.getJSONObject("processes")).connections(graphJson.getJSONArray("connections").toJavaList(GraphConnection.class)).build();
                 String targetNodeId = graph.filter(GlobalConfig.nodeId, port);
                 if (targetNodeId == null || targetNodeId.equals("")) {
                     log.info("there is no output node");

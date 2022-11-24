@@ -4,6 +4,7 @@ import com.xuelang.mqstream.common.CommonUtil;
 import com.xuelang.service.NodeSiblingService;
 import com.xuelang.service.PortService;
 import com.xuelang.service.logkit.EventLogger;
+import com.xuelang.service.util.OkHttpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.server.ConfigurableWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
@@ -51,5 +52,10 @@ public class ComponentAutoConfiguration {
             return new NodeSiblingService();
         }
         return null;
+    }
+
+    @Bean
+    public OkHttpUtil okHttpUtil() {
+        return new OkHttpUtil();
     }
 }

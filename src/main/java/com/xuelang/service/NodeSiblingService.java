@@ -20,6 +20,7 @@ public class NodeSiblingService {
     private AffinityRequest request = new AffinityRequest();
 
     public String lookup(String port) throws IOException {
+        log.info("start to lookup {} service name", port);
         String url = request.getUrl("/appcontroller/graph/" + GlobalConfig.userId + "/" + GlobalConfig.appId);
         String content = httpClient.get(url);
         if (StringUtils.isNotEmpty(content)) {
@@ -29,7 +30,10 @@ public class NodeSiblingService {
                 JSONObject graphJson = JSONObject.parseObject(graphJsonStr);
                 Graph graph = new Graph.Builder().processes(graphJson.getJSONObject("processes")).connections(graphJson.getJSONArray("connections")).build();
                 String targetNodeId = graph.filter(GlobalConfig.nodeId, port);
-                log.info("lookup service name for nodeId-{}", targetNodeId);
+                if (targetNodeId == null || targetNodeId.equals("")) {
+                    log.info("there is no output node");
+                }
+                log.info("get service name for nodeId-{}", targetNodeId);
                 return getSiblingServiceName(targetNodeId);
             }
         }

@@ -3,11 +3,13 @@ package com.xuelang.mqstream.entity;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
-
+@Slf4j
 public final class Graph {
     final JSONObject processes;
     final List<Connection> connections;
@@ -38,9 +40,14 @@ public final class Graph {
     }
 
     public String filter(String srcNodeId, String port) {
-        System.out.println(JSONObject.toJSON(this.connections).toString());
-        Optional<Connection> conn = this.connections.stream().filter(c -> c.getSrc().getString("process").equals(srcNodeId) && c.getSrc().getString("port").equals(port)).findFirst();
-        return conn.get().getTgt().getString("process");
+        if (this.connections.size() > 0) {
+            Stream<Connection> connectionStream = this.connections.stream().filter(c -> c.getSrc().getString("process").equals(srcNodeId) && c.getSrc().getString("port").equals(port));
+            Optional<Connection> conn = connectionStream.findFirst();
+            if (conn == null) return null;
+            return conn.get().getTgt().getString("process");
+        }
+        log.info("there is no connections in app graph");
+        return null;
     }
 
     public static final class Builder {

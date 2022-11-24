@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-@Service
 public class OkHttpUtil {
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     OkHttpClient client = new OkHttpClient.Builder()

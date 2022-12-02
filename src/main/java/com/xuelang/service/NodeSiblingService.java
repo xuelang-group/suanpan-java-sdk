@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.xuelang.mqstream.api.requests.AffinityRequest;
 import com.xuelang.mqstream.config.GlobalConfig;
-import com.xuelang.mqstream.entity.GraphConnection;
 import com.xuelang.mqstream.entity.Graph;
 import com.xuelang.service.util.OkHttpUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -34,12 +33,12 @@ public class NodeSiblingService {
             }
             String graphJsonStr = jsonObject.getJSONObject("data").getJSONObject("graphJsonStr").toJSONString();
             JSONObject graphJson = JSONObject.parseObject(graphJsonStr);
-            graph = Graph.builder().processes(graphJson.getJSONObject("processes")).connections(graphJson.getJSONArray("connections").toJavaList(GraphConnection.class)).build();
+            graph = new Graph(graphJson);
 
             String portUUID = graph.getPortUUIDWithPortName(GlobalConfig.nodeId, port);
-            JSONObject tgt = graph.filter(GlobalConfig.nodeId, portUUID);
-            String targetNodeId = tgt.getString("process");
-            String targetNodeInPort = tgt.getString("port");
+            Graph.GraphConnection.Tgt tgt = graph.filter(GlobalConfig.nodeId, portUUID);
+            String targetNodeId = tgt.getProcess();
+            String targetNodeInPort = tgt.getPort();
 
             String inPortName = graph.getPortNameWithPortUUID(targetNodeId, targetNodeInPort);
             String ip = this.getServiceIp(targetNodeId);

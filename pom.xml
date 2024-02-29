@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.xuelangcloud</groupId>
+    <artifactId>suanpan-java-sdk-next</artifactId>
+    <version>next-1.0.0-alpha</version>
+    <packaging>jar</packaging>
+    <name>suanpan-java-sdk-next</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+        <java.version>1.8</java.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <github.global.server>github</github.global.server>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <version>5.1.7.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.9</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.6</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <version>3.2.8.RELEASE</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>3.9.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.83</version>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.socket</groupId>
+            <artifactId>socket.io-client</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+    </dependencies>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <!--1.作用：将jar deploy(发布)到本地储存库位置(altDeploymentRepository) -->
+            <!--            <plugin>-->
+            <!--                <artifactId>maven-deploy-plugin</artifactId>-->
+            <!--                <version>2.8.2</version>-->
+            <!--                <configuration>-->
+            <!--                    <altDeploymentRepository>-->
+            <!--                        repo.stage::default::file://${project.build.directory}/repo-stage-->
+            <!--                    </altDeploymentRepository>-->
+            <!--                </configuration>-->
+            <!--            </plugin>-->
+            <!--2.作用：将本地存储库位置的jar文件发布到 github上 -->
+            <!--            <plugin>-->
+            <!--                <groupId>com.github.github</groupId>-->
+            <!--                <artifactId>site-maven-plugin</artifactId>-->
+            <!--                <version>0.12</version>-->
+            <!--                <configuration>-->
+            <!--                    &lt;!&ndash; Github settings &ndash;&gt;-->
+            <!--                    <server>github</server>-->
+            <!--                    <repositoryName>suanpan-java-sdk</repositoryName>-->
+            <!--                    <repositoryOwner>xuelang-group</repositoryOwner>-->
+            <!--                    &lt;!&ndash;远程分支名&ndash;&gt;-->
+            <!--                    <branch>refs/heads/mvn-repo</branch>-->
+            <!--                    &lt;!&ndash;                    <message>Artifacts for ${project.name}/${project.artifactId}/${project.version}</message>&ndash;&gt;-->
+            <!--                    &lt;!&ndash;git 提交的消息&ndash;&gt;-->
+            <!--                    <message>Maven artifacts for ${project.version}</message>-->
+            <!--                    <noJekyll>true</noJekyll>-->
+            <!--                    &lt;!&ndash;部署的目录，这里是和上面的 maven-deploy-plugin 的 configuration.altDeploymentRepository 对应&ndash;&gt;-->
+            <!--                    <outputDirectory>${project.build.directory}/repo-stage</outputDirectory>-->
+            <!--                    <includes>-->
+            <!--                        <include>**/*</include>-->
+            <!--                    </includes>-->
+            <!--                </configuration>-->
+            <!--                <executions>-->
+            <!--                    <execution>-->
+            <!--                        <phase>deploy</phase>-->
+            <!--                        <goals>-->
+            <!--                            <goal>site</goal>-->
+            <!--                        </goals>-->
+            <!--                    </execution>-->
+            <!--                </executions>-->
+            <!--            </plugin>-->
+
+
+            <!-- Javadoc -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9.1</version>
+                <configuration>
+                    <show>private</show>
+                    <nohelp>true</nohelp>
+                    <charset>UTF-8</charset>
+                    <encoding>UTF-8</encoding>
+                    <docencoding>UTF-8</docencoding>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- GPG -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <!-- 过滤器排除配置文件-->
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <includes>
+                                        <include>com/xuelang/**</include>
+                                        <include>example/**</include>
+                                        <include>io/minio/**</include>
+                                        <include>shaded/**</include>
+                                        <include>META-INF/maven/com.xuelangcloud/**</include>
+                                    </includes>
+                                </filter>
+                            </filters>
+                            <relocations>
+                                <relocation>
+                                    <!-- 原依赖路径 -->
+                                    <pattern>io.minio</pattern>
+                                    <!-- sdk依赖路径 -->
+                                    <shadedPattern>shaded.io.minio</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+
+    </build>
+
+</project>

@@ -4,8 +4,10 @@ import com.xuelang.suanpan.annotation.AsyncHandlerMapping;
 import com.xuelang.suanpan.annotation.SuanpanHandler;
 import com.xuelang.suanpan.annotation.SuanpanHandlerResponseBody;
 import com.xuelang.suanpan.annotation.SyncHandlerMapping;
+import com.xuelang.suanpan.configuration.SpEnv;
 import com.xuelang.suanpan.domain.handler.HandlerRequest;
 import com.xuelang.suanpan.domain.handler.HandlerResponse;
+import io.lettuce.core.RedisFuture;
 import org.apache.commons.collections4.CollectionUtils;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -15,6 +17,7 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.tools.Diagnostic;
+import java.awt.event.FocusEvent;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,9 +26,9 @@ import java.util.stream.Collectors;
 public class HandlerCompileValidator extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        boolean hasSync = false;
-        boolean hasAsync = false;
-        List<Integer> totalInPortIndex = new ArrayList<>();
+        TypeElement syncHandler = null;
+        TypeElement asyncHandler = null;
+        Map<TypeElement, List<Integer>> inPortIndexMapHandler = new HashMap<>();
         for (Element element : roundEnv.getElementsAnnotatedWith(SuanpanHandler.class)) {
             if (element.getKind() == ElementKind.CLASS) {
                 TypeElement typeElement = (TypeElement) element;
@@ -91,9 +94,15 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                         "Method: " + method + " @AsyncHandlerMapping inport_index must be set positive integer", element);
                             }
 
+                            List<Integer> existIndexes = inPortIndexMapHandler.get(typeElement);
+                            if (CollectionUtils.isEmpty(existIndexes)) {
+                                existIndexes = new ArrayList<>(asyncHandlerMapping.inport_index());
+                            } else {
+                                existIndexes.add(asyncHandlerMapping.inport_index());
+                            }
 
-                            totalInPortIndex.add(asyncHandlerMapping.inport_index());
-                            hasAsync = true;
+                            inPortIndexMapHandler.put(typeElement, existIndexes);
+                            asyncHandler = typeElement;
                         }
 
                         if (syncHandlerMapping != null) {
@@ -117,23 +126,32 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                         "Method: " + method + " @SyncHandlerMapping outport_index values must be set positive integer", element);
                             }
 
-                            totalInPortIndex.addAll(Arrays.stream(syncHandlerMapping.inport_index()).boxed().collect(Collectors.toList()));
-                            hasSync = true;
+                            List<Integer> existIndexes = inPortIndexMapHandler.get(typeElement);
+                            if (CollectionUtils.isEmpty(existIndexes)) {
+                                existIndexes = Arrays.stream(syncHandlerMapping.inport_index()).boxed().collect(Collectors.toList());
+                            } else {
+                                existIndexes.addAll(Arrays.stream(syncHandlerMapping.inport_index()).boxed().collect(Collectors.toList()));
+                            }
+
+                            inPortIndexMapHandler.put(typeElement, existIndexes);
+                            syncHandler = typeElement;
                         }
 
                     }
                 }
 
                 // 校验是否同时存在同步和异步处理器
-                if (hasAsync && hasSync) {
+                if (syncHandler != null && asyncHandler != null) {
                     processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                            "@AsyncHandlerMapping and @SyncHandlerMapping cannot exist together on handler Class: "
-                                    + typeElement, element);
+                            "@AsyncHandlerMapping handler: " + asyncHandler + " and @SyncHandlerMapping handler: "
+                                    + syncHandler + " cannot exist together", element);
                 }
 
-                if (hasDuplicates(totalInPortIndex.stream().mapToInt(Integer::intValue).toArray())) {
+
+                String globalDuplication;
+                if ((globalDuplication = getGlobalInPortDuplication(inPortIndexMapHandler)) != null) {
                     processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                            "handler Class: " + typeElement + " cannot has duplication inport", element);
+                            "handler Classes: " + globalDuplication + " cannot has duplication inport", element);
                 }
             }
         }
@@ -141,9 +159,38 @@ public class HandlerCompileValidator extends AbstractProcessor {
         return true;
     }
 
+    private static String getGlobalInPortDuplication(Map<TypeElement, List<Integer>> typesMap) {
+        if (typesMap == null || typesMap.isEmpty()){
+            return null;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        List<TypeElement> keys = typesMap.keySet().stream().collect(Collectors.toList());
+        for (int i = 0; i< keys.size();i++){
+            TypeElement type = keys.get(i);
+            List<Integer> indexes = typesMap.get(type);
+            for (int n = i+1; n< keys.size();n++){
+                TypeElement item = keys.get(n);
+                List<Integer> itemIndexes = typesMap.get(item);
+                if (CollectionUtils.containsAny(indexes,itemIndexes)){
+                    builder.append(type.asType().toString());
+                    builder.append(" and ");
+                    builder.append(item.asType().toString());
+                    builder.append(";");
+                }
+            }
+        }
+
+        if (builder.length()>0){
+            return builder.toString();
+        }
+
+        return null;
+    }
+
     private static boolean hasNonPositiveValue(int[] array) {
         for (int num : array) {
-            if (num <= 0) {
+            if (num <= 0 || (SpEnv.getMaxInPortIndex() != null && num > SpEnv.getMaxInPortIndex())) {
                 return true;
             }
         }

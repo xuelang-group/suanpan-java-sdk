@@ -1,6 +1,7 @@
 package com.xuelang.suanpan.domain.handler;
 
 import com.xuelang.suanpan.domain.io.InPort;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 
 public class InPortData {
@@ -21,5 +22,13 @@ public class InPortData {
 
     public void setData(Object data) {
         this.data = data;
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this)
+                .append("port", inPort.getUuid())
+                .append("data", data)
+                .toString();
     }
 }

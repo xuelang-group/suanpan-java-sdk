@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -57,9 +58,16 @@ public class HandlerProxy {
                 }
             } else {
                 for (Object outPortItem : srcDefaultOutPorts) {
+                    List<Object> result = new ArrayList<>();
                     Object origin = target.get((OutPort) outPortItem);
-                    src.add(origin);
-                    target.put((OutPort) outPortItem, src);
+                    if (origin != null){
+                        result.add(origin);
+                    }
+
+                    src.stream().forEach(item->{
+                        result.add(item);
+                    });
+                    target.put((OutPort) outPortItem, result);
                 }
             }
         }

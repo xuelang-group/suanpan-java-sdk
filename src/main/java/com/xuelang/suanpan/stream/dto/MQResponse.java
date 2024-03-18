@@ -1,9 +1,8 @@
-package com.xuelang.suanpan.stream.entities;
+package com.xuelang.suanpan.stream.dto;
 
 import com.alibaba.fastjson.JSONObject;
 import com.xuelang.suanpan.configuration.SpEnv;
 import com.xuelang.suanpan.domain.io.InPort;
-import com.xuelang.suanpan.stream.dto.MessageSchemaConstants;
 
 import java.util.ArrayList;
 import java.util.HashMap;

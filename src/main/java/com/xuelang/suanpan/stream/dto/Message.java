@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.stream.entities;
+package com.xuelang.suanpan.stream.dto;
 
 import com.xuelang.suanpan.domain.handler.HandlerRequest;
 import com.xuelang.suanpan.domain.handler.InPortData;
@@ -22,7 +22,7 @@ public class Message {
      * 同步、异步接收消息类型
      */
     private String receiveMsgType = "async";
-    private Boolean success;
+    private boolean success = true;
     /**
      * 扩展信息
      */
@@ -56,16 +56,19 @@ public class Message {
     public String getReceiveMsgType() {
         return receiveMsgType;
     }
+
     public void setReceiveMsgType(String receiveMsgType) {
         this.receiveMsgType = receiveMsgType;
     }
 
-    public Boolean getSuccess() {
+    public boolean getSuccess() {
         return success;
     }
 
     public void setSuccess(Boolean success) {
-        this.success = success;
+        if (success != null) {
+            this.success = success;
+        }
     }
 
     public void setExtra(Extra extra) {
@@ -80,8 +83,8 @@ public class Message {
         portDataMap.put(inPort, value);
     }
 
-    public HandlerRequest covert(){
-        if (this.portDataMap == null || this.portDataMap.isEmpty()){
+    public HandlerRequest covert() {
+        if (this.portDataMap == null || this.portDataMap.isEmpty()) {
             return null;
         }
 
@@ -96,5 +99,4 @@ public class Message {
         request.setMsg(msg);
         return request;
     }
-
 }

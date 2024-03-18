@@ -1,8 +1,9 @@
-package com.xuelang.suanpan.stream.entities;
+package com.xuelang.suanpan.stream.dto;
 
 import com.alibaba.fastjson.JSON;
 import com.xuelang.suanpan.configuration.SpEnv;
 import com.xuelang.suanpan.domain.io.OutPort;
+import com.xuelang.suanpan.stream.dto.Extra;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;

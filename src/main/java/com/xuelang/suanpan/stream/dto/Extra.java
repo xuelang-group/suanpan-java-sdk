@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.stream.entities;
+package com.xuelang.suanpan.stream.dto;
 
 import com.alibaba.fastjson.JSONObject;
 

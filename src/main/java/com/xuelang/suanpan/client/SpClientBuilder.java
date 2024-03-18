@@ -1,17 +1,13 @@
 package com.xuelang.suanpan.client;
 
 import com.xuelang.suanpan.common.BaseSpDomainEntity;
-import com.xuelang.suanpan.common.ProxrConnectionParam;
-import com.xuelang.suanpan.configuration.ConfigurationImpl;
-import com.xuelang.suanpan.configuration.IConfiguration;
-import com.xuelang.suanpan.event.EventImpl;
-import com.xuelang.suanpan.event.IEvent;
-import com.xuelang.suanpan.service.IService;
-import com.xuelang.suanpan.service.ServiceImpl;
-import com.xuelang.suanpan.state.IState;
-import com.xuelang.suanpan.state.StateImpl;
+import com.xuelang.suanpan.domain.proxr.ProxrConnectionParam;
+import com.xuelang.suanpan.configuration.Configuration;
+import com.xuelang.suanpan.event.Event;
+import com.xuelang.suanpan.service.Service;
+import com.xuelang.suanpan.state.State;
 import com.xuelang.suanpan.stream.IStream;
-import com.xuelang.suanpan.stream.StreamImpl;
+import com.xuelang.suanpan.stream.Stream;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -62,24 +58,38 @@ public class SpClientBuilder {
 
     private static class SpClient implements ISpClient {
         private volatile IStream stream;
-        private volatile IConfiguration configuration;
-        private volatile IEvent event;
-        private volatile IService service;
-        private volatile IState state;
+        private volatile Configuration configuration;
+        private volatile Event event;
+        private volatile Service service;
+        private volatile State state;
         private ProxrConnectionParam proxrConnectionParam;
 
         public SpClient() {
+            if (null == configuration) {
+                synchronized (this) {
+                    if (null == configuration) {
+                        configuration = createInstance(Configuration.class);
+                    }
+                }
+            }
         }
 
         public SpClient(ProxrConnectionParam proxrConnectionParam) {
             this.proxrConnectionParam = proxrConnectionParam;
+            if (null == configuration) {
+                synchronized (this) {
+                    if (null == configuration) {
+                        configuration = createInstance(Configuration.class);
+                    }
+                }
+            }
         }
 
         public IStream stream() {
             if (null == stream) {
                 synchronized (this) {
                     if (null == stream) {
-                        stream = createInstance(StreamImpl.class);
+                        stream = createInstance(Stream.class);
                     }
                 }
             }
@@ -87,56 +97,61 @@ public class SpClientBuilder {
             return stream;
         }
 
-        public IConfiguration configuration() {
-            if (null == configuration) {
-                synchronized (this) {
-                    if (null == configuration) {
-                        configuration = createInstance(ConfigurationImpl.class);
-                    }
-                }
-            }
-
+        public Configuration configuration() {
             return configuration;
         }
 
-        public IEvent event() {
+        @Override
+        public Event event() {
             if (null == event) {
                 synchronized (this) {
                     if (null == event) {
-                        event = createInstance(EventImpl.class);
+                        event = createInstance(Event.class);
                     }
                 }
             }
             return event;
         }
 
-        public IService service() {
+        @Override
+        public Service service() {
             if (null == service) {
                 synchronized (this) {
                     if (null == service) {
-                        service = createInstance(ServiceImpl.class);
+                        service = createInstance(Service.class);
                     }
                 }
             }
             return service;
         }
 
-        public IState state() {
+        @Override
+        public State state() {
             if (null == state) {
                 synchronized (this) {
                     if (null == state) {
-                        state = createInstance(StateImpl.class);
+                        state = createInstance(State.class);
                     }
                 }
             }
+
             return state;
         }
 
         private <T extends BaseSpDomainEntity> T createInstance(Class<T> clazz) {
             try {
-                Constructor<T> constructor = clazz.getDeclaredConstructor(proxrConnectionParam == null ? null : ProxrConnectionParam.class);
-                constructor.setAccessible(true);
-                return constructor.newInstance(proxrConnectionParam);
+                Constructor<T> constructor;
+                if (proxrConnectionParam == null){
+                    constructor = clazz.getDeclaredConstructor();
+                    constructor.setAccessible(true);
+                    return constructor.newInstance();
+                } else{
+                    constructor = clazz.getDeclaredConstructor(ProxrConnectionParam.class);
+                    constructor.setAccessible(true);
+                    return constructor.newInstance(proxrConnectionParam);
+                }
+
+
             } catch (NoSuchMethodException | InvocationTargetException | InstantiationException |
                      IllegalAccessException e) {
                 throw new RuntimeException(e);

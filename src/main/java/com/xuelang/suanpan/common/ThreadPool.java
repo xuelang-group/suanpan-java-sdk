@@ -8,7 +8,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class ThreadPool {
-    private static final ThreadFactory namedThreadPoolFactory = new ThreadFactoryBuilder().setNameFormat("suanpan-handler-pool-%d").build();
+    private static final ThreadFactory namedThreadPoolFactory = new ThreadFactoryBuilder().setNameFormat("suanpan-pool-%d").build();
     private static volatile ThreadPoolExecutor threadPoolExecutor = null;
     private static final int cpus = Runtime.getRuntime().availableProcessors();
 

@@ -1,70 +1,67 @@
 package com.xuelang.suanpan.domain.handler;
 
+import com.xuelang.suanpan.common.exception.IllegalRequestException;
+import com.xuelang.suanpan.common.exception.InvocationHandlerException;
+import com.xuelang.suanpan.common.exception.NoSuchHandlerException;
 import com.xuelang.suanpan.domain.io.InPort;
-import com.xuelang.suanpan.stream.entities.Message;
+import com.xuelang.suanpan.domain.io.OutPort;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class HandlerProxy {
-    private final Map<InPort, HandlerEntry> HANDLER_MAP;
+    private final Map<InPort, MethodEntry> PROXY_METHOD_ENTRY_MAP;
 
     public HandlerProxy() {
-        HANDLER_MAP = scanHandlers();
-    }
-
-    private Map<InPort, HandlerEntry> scanHandlers() {
-
-        return null;
+        PROXY_METHOD_ENTRY_MAP = HandlerScanner.scan();
     }
 
     /**
-     * @param message 如果是同步处理器，则message中可能包含多个输入端口的数据；如果是异步处理器，则message中只会包含一个输入端口的数据；
+     * @param request 如果是同步处理器，则message中可能包含多个输入端口的数据；如果是异步处理器，则message中只会包含一个输入端口的数据；
      * @return
      * @throws RuntimeException
      */
-    public HandlerResponse invoke(Message message) throws RuntimeException {
-        HandlerRequest request = message.covert();
+    public HandlerResponse invoke(HandlerRequest request) throws NoSuchHandlerException, IllegalRequestException, InvocationHandlerException {
         if (request == null) {
-            // TODO: 2024/3/12 发送事件到平台
-            throw new RuntimeException("received inport message is empty");
+            throw new IllegalRequestException("received message inport data is empty, can not invoke suanpan handler");
         }
-
         InPort firstInPort = request.getMsg().get(0).getInPort();
-        HandlerEntry handler;
-        if ((handler = HANDLER_MAP.get(firstInPort)) == null) {
+        MethodEntry methodEntry;
+        if ((methodEntry = PROXY_METHOD_ENTRY_MAP.get(firstInPort)) == null) {
             // TODO: 2024/3/12 发送事件到平台
-            throw new RuntimeException("there is no handler for inport: " + firstInPort.getUuid());
+            throw new NoSuchHandlerException("there is no handler for inport: " + firstInPort.getUuid());
         }
 
+        HandlerResponse response = null;
         try {
-            return (HandlerResponse) handler.getMethod().invoke(handler.getInstance(), request);
+            response = (HandlerResponse) methodEntry.getMethod().invoke(methodEntry.getInstance(), request);
+            merge(response.getNonSpecifiedOutPortDataList(), methodEntry.getOutPorts(), response.getOutPortDataMap());
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new InvocationHandlerException("invoke suanpan handler error", e);
         } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
+            throw new InvocationHandlerException("invoke suanpan handler error", e);
         }
 
-       /* if (handler.isSync()) {
-            try {
+        return response;
+    }
 
-                handlerResponse = (HandlerResponse) handler.getMethod().invoke(handler.getInstance(), request);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            } catch (InvocationTargetException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            try {
-                handlerResponse = (HandlerResponse) handler.getMethod().invoke(handler.getInstance(), inPortMsgMap.get(firstInPort));
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            } catch (InvocationTargetException e) {
-                throw new RuntimeException(e);
+    private void merge(List<Object> src , List<OutPort> srcDefaultOutPorts, Map<OutPort, Object> target) {
+        if (!CollectionUtils.isEmpty(src)) {
+            if (target == null || target.isEmpty()) {
+                for (Object outPortItem : srcDefaultOutPorts) {
+                    target.put((OutPort) outPortItem, src);
+                }
+            } else {
+                for (Object outPortItem : srcDefaultOutPorts) {
+                    Object origin = target.get((OutPort) outPortItem);
+                    src.add(origin);
+                    target.put((OutPort) outPortItem, src);
+                }
             }
         }
-
-        return handlerResponse;
-        */
     }
 }

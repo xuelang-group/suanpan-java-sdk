@@ -58,12 +58,16 @@ public class MQResponse {
             message.setRequestId((String) tmpContentMap.get(MessageSchemaConstants.REQUEST_ID_KEY));
             tmpContentMap.remove(MessageSchemaConstants.REQUEST_ID_KEY);
         }
+        if(tmpContentMap.get(MessageSchemaConstants.REQUEST_ID_ALIAS_KEY) != null){
+            message.setRequestId((String) tmpContentMap.get(MessageSchemaConstants.REQUEST_ID_ALIAS_KEY));
+            tmpContentMap.remove(MessageSchemaConstants.REQUEST_ID_ALIAS_KEY);
+        }
         if(tmpContentMap.get(MessageSchemaConstants.EXTRA_KEY) != null){
             message.setExtra(JSONObject.parseObject((String) tmpContentMap.get(MessageSchemaConstants.EXTRA_KEY), Extra.class));
             tmpContentMap.remove(MessageSchemaConstants.EXTRA_KEY);
         }
         if(tmpContentMap.get(MessageSchemaConstants.SUCCESS_KEY) != null){
-            message.setSuccess((Boolean) tmpContentMap.get(MessageSchemaConstants.SUCCESS_KEY));
+            message.setSuccess(Boolean.valueOf((String) tmpContentMap.get(MessageSchemaConstants.SUCCESS_KEY)));
             tmpContentMap.remove(MessageSchemaConstants.SUCCESS_KEY);
         }
 

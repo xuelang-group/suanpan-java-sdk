@@ -1,8 +1,9 @@
 package com.xuelang.suanpan.domain.handler;
 
-import com.xuelang.suanpan.common.exception.IllegalRequestException;
-import com.xuelang.suanpan.common.exception.InvocationHandlerException;
-import com.xuelang.suanpan.common.exception.NoSuchHandlerException;
+import com.alibaba.fastjson.JSON;
+import com.xuelang.suanpan.exception.IllegalRequestException;
+import com.xuelang.suanpan.exception.InvocationHandlerException;
+import com.xuelang.suanpan.exception.NoSuchHandlerException;
 import com.xuelang.suanpan.domain.io.InPort;
 import com.xuelang.suanpan.domain.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class HandlerProxy {
         if (request == null) {
             throw new IllegalRequestException("received message inport data is empty, can not invoke suanpan handler");
         }
+        log.info("invoke suanpan handler request: {}", JSON.toJSONString(request));
         InPort firstInPort = request.getMsg().get(0).getInPort();
         MethodEntry methodEntry;
         if ((methodEntry = PROXY_METHOD_ENTRY_MAP.get(firstInPort)) == null) {
@@ -47,6 +49,7 @@ public class HandlerProxy {
             throw new InvocationHandlerException("invoke suanpan handler error", e);
         }
 
+        log.info("invoke suanpan handler response:{}", JSON.toJSONString(response));
         return response;
     }
 

@@ -3,10 +3,13 @@ package com.xuelang.suanpan.configuration;
 import com.alibaba.fastjson.JSONObject;
 import com.xuelang.suanpan.domain.io.InPort;
 import com.xuelang.suanpan.domain.io.OutPort;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
+import java.lang.reflect.Constructor;
 import java.util.*;
 
+@Slf4j
 public class SpEnv {
     private static Map<String, InPort> inPortMap = new HashMap<>();
     private static Map<String, OutPort> outPortMap = new HashMap<>();
@@ -22,20 +25,29 @@ public class SpEnv {
             if (inputs != null && !inputs.isEmpty()) {
                 final int[] maxInportIndex = {-1};
                 inputs.values().stream().forEach(v -> {
-                    InPort inPort = new InPort();
-                    inPort.setUuid(((JSONObject) v).getString("uuid"));
-                    inPort.setName(((JSONObject) v).getString("name"));
-                    inPort.setType(((JSONObject) v).getString("type"));
-                    inPort.setSubType(((JSONObject) v).getString("subtype"));
-                    inPort.setDescription(((JSONObject) v).getString("description"));
+                    InPort inPort = null;
+                    Constructor<InPort> constructor;
+                    try {
+                        constructor = InPort.class.getDeclaredConstructor();
+                        constructor.setAccessible(true);
+                        inPort =  constructor.newInstance();
+                        inPort.setUuid(((JSONObject) v).getString("uuid"));
+                        inPort.setName(((JSONObject) v).getString("name"));
+                        inPort.setType(((JSONObject) v).getString("type"));
+                        inPort.setSubType(((JSONObject) v).getString("subtype"));
+                        inPort.setDescription(((JSONObject) v).getString("description"));
+                    } catch (Exception e) {
+                        log.error("create inPort instant from spParam error", e);
+                    }
+
                     inPortMap.put(inPort.getUuid(), inPort);
                     int index = Integer.valueOf(inPort.getUuid().substring(2));
-                    if (index> maxInportIndex[0]){
+                    if (index > maxInportIndex[0]) {
                         maxInportIndex[0] = index;
                     }
                 });
 
-                if (maxInportIndex[0]>0){
+                if (maxInportIndex[0] > 0) {
                     Max_InPort_Index = maxInportIndex[0];
                 }
             }
@@ -44,20 +56,29 @@ public class SpEnv {
             if (outputs != null && !outputs.isEmpty()) {
                 final int[] maxOutportIndex = {-1};
                 outputs.values().stream().forEach(v -> {
-                    OutPort outPort = new OutPort();
-                    outPort.setUuid(((JSONObject) v).getString("uuid"));
-                    outPort.setName(((JSONObject) v).getString("name"));
-                    outPort.setType(((JSONObject) v).getString("type"));
-                    outPort.setSubType(((JSONObject) v).getString("subtype"));
-                    outPort.setDescription(((JSONObject) v).getString("description"));
+                    OutPort outPort = null;
+                    Constructor<OutPort> constructor;
+                    try {
+                        constructor = OutPort.class.getDeclaredConstructor();
+                        constructor.setAccessible(true);
+                        outPort =  constructor.newInstance();
+                        outPort.setUuid(((JSONObject) v).getString("uuid"));
+                        outPort.setName(((JSONObject) v).getString("name"));
+                        outPort.setType(((JSONObject) v).getString("type"));
+                        outPort.setSubType(((JSONObject) v).getString("subtype"));
+                        outPort.setDescription(((JSONObject) v).getString("description"));
+                    } catch (Exception e) {
+                        log.error("create outPort instant from spParam error", e);
+                    }
+
                     outPortMap.put(outPort.getUuid(), outPort);
                     int index = Integer.valueOf(outPort.getUuid().substring(3));
-                    if (index> maxOutportIndex[0]){
+                    if (index > maxOutportIndex[0]) {
                         maxOutportIndex[0] = index;
                     }
                 });
 
-                if (maxOutportIndex[0]>0){
+                if (maxOutportIndex[0] > 0) {
                     Max_OutPort_Index = maxOutportIndex[0];
                 }
             }
@@ -118,7 +139,7 @@ public class SpEnv {
         return value != null ? (String) value : null;
     }
 
-    public static String getReceiveQueue(){
+    public static String getReceiveQueue() {
         Object value = get(ConfigurationKeys.streamRecvQueueKey);
         return value != null ? (String) value : null;
     }

@@ -4,7 +4,7 @@ import com.xuelang.suanpan.domain.io.OutPort;
 import java.lang.reflect.Method;
 import java.util.List;
 
-public class HandlerEntry<T> {
+public class MethodEntry<T> {
     private T instance;
     private Method method;
     private boolean sync;

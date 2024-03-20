@@ -4,10 +4,8 @@ import com.xuelang.suanpan.annotation.AsyncHandlerMapping;
 import com.xuelang.suanpan.annotation.SuanpanHandler;
 import com.xuelang.suanpan.annotation.SuanpanHandlerResponseBody;
 import com.xuelang.suanpan.annotation.SyncHandlerMapping;
-import com.xuelang.suanpan.configuration.SpEnv;
-import com.xuelang.suanpan.domain.handler.HandlerRequest;
-import com.xuelang.suanpan.domain.handler.HandlerResponse;
-import io.lettuce.core.RedisFuture;
+import com.xuelang.suanpan.stream.handler.HandlerRequest;
+import com.xuelang.suanpan.stream.handler.HandlerResponse;
 import org.apache.commons.collections4.CollectionUtils;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -17,7 +15,6 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.tools.Diagnostic;
-import java.awt.event.FocusEvent;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -31,8 +28,8 @@ public class HandlerCompileValidator extends AbstractProcessor {
         Map<TypeElement, List<Integer>> inPortIndexMapHandler = new HashMap<>();
         for (Element element : roundEnv.getElementsAnnotatedWith(SuanpanHandler.class)) {
             if (element.getKind() == ElementKind.CLASS) {
-                TypeElement typeElement = (TypeElement) element;
-                List<? extends Element> enclosedElements = typeElement.getEnclosedElements();
+                TypeElement handler = (TypeElement) element;
+                List<? extends Element> enclosedElements = handler.getEnclosedElements();
                 for (Element enclosedElement : enclosedElements) {
                     if (enclosedElement.getKind() == ElementKind.METHOD) {
                         // 获取方法
@@ -84,28 +81,28 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                         "Method: " + method + " @AsyncHandlerMapping outport_index values cannot be duplication", element);
                             }
 
-                            if (asyncHandlerMapping.default_outport_index().length == 0 || hasNonPositiveValue(asyncHandlerMapping.default_outport_index())) {
+                            if (asyncHandlerMapping.default_outport_index().length == 0 ) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @AsyncHandlerMapping outport_index values must be set positive integer", element);
+                                        "Method: " + method + " @AsyncHandlerMapping outport_index values cannot be null", element);
                             }
 
-                            if (hasNonPositiveValue(new int[]{asyncHandlerMapping.inport_index()})) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @AsyncHandlerMapping inport_index must be set positive integer", element);
-                            }
-
-                            List<Integer> existIndexes = inPortIndexMapHandler.get(typeElement);
+                            List<Integer> existIndexes = inPortIndexMapHandler.get(handler);
                             if (CollectionUtils.isEmpty(existIndexes)) {
                                 existIndexes = new ArrayList<>(asyncHandlerMapping.inport_index());
                             } else {
                                 existIndexes.add(asyncHandlerMapping.inport_index());
                             }
 
-                            inPortIndexMapHandler.put(typeElement, existIndexes);
-                            asyncHandler = typeElement;
+                            inPortIndexMapHandler.put(handler, existIndexes);
+                            asyncHandler = handler;
                         }
 
                         if (syncHandlerMapping != null) {
+                            if (syncHandler != null){
+                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                        "Method: " + method + " @SyncHandlerMapping function cannot be duplication", element);
+                            }
+
                             if (hasDuplicates(syncHandlerMapping.default_outport_index())) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                                         "Method: " + method + " @SyncHandlerMapping outport_index values cannot be duplication", element);
@@ -116,25 +113,25 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                         "Method: " + method + " @SyncHandlerMapping inport_index values cannot be duplication", element);
                             }
 
-                            if (syncHandlerMapping.inport_index().length == 0 || hasNonPositiveValue(syncHandlerMapping.inport_index())) {
+                            if (syncHandlerMapping.inport_index().length == 0 ) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @SyncHandlerMapping inport_index values must be set positive integer", element);
+                                        "Method: " + method + " @SyncHandlerMapping inport_index values cannot be null", element);
                             }
 
-                            if (syncHandlerMapping.default_outport_index().length == 0 || hasNonPositiveValue(syncHandlerMapping.default_outport_index())) {
+                            if (syncHandlerMapping.default_outport_index().length == 0 ) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @SyncHandlerMapping outport_index values must be set positive integer", element);
+                                        "Method: " + method + " @SyncHandlerMapping outport_index values cannot be null", element);
                             }
 
-                            List<Integer> existIndexes = inPortIndexMapHandler.get(typeElement);
+                            List<Integer> existIndexes = inPortIndexMapHandler.get(handler);
                             if (CollectionUtils.isEmpty(existIndexes)) {
                                 existIndexes = Arrays.stream(syncHandlerMapping.inport_index()).boxed().collect(Collectors.toList());
                             } else {
                                 existIndexes.addAll(Arrays.stream(syncHandlerMapping.inport_index()).boxed().collect(Collectors.toList()));
                             }
 
-                            inPortIndexMapHandler.put(typeElement, existIndexes);
-                            syncHandler = typeElement;
+                            inPortIndexMapHandler.put(handler, existIndexes);
+                            syncHandler = handler;
                         }
 
                     }
@@ -147,13 +144,13 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                     + syncHandler + " cannot exist together", element);
                 }
 
-
-                String globalDuplication;
-                if ((globalDuplication = getGlobalInPortDuplication(inPortIndexMapHandler)) != null) {
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                            "handler Classes: " + globalDuplication + " cannot has duplication inport", element);
-                }
             }
+        }
+
+        String globalDuplication;
+        if ((globalDuplication = getGlobalInPortDuplication(inPortIndexMapHandler)) != null) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                    "handler Classes: " + globalDuplication + " cannot has duplication inport");
         }
 
         return true;
@@ -186,16 +183,6 @@ public class HandlerCompileValidator extends AbstractProcessor {
         }
 
         return null;
-    }
-
-    private static boolean hasNonPositiveValue(int[] array) {
-        for (int num : array) {
-            if (num <= 0 || (SpEnv.getMaxInPortIndex() != null && num > SpEnv.getMaxInPortIndex())) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static boolean hasDuplicates(int[] array) {

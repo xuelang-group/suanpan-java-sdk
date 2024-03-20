@@ -27,11 +27,15 @@ public class ConfigurationKeys {
 
     public static final String apiHostTlsKey = "SP_API_HOST_TLS";
 
-    public static final String affinityKey = "SP_AFFINITY";
-
     public static final String accessKey = "SP_ACCESS_KEY";
 
     public static final String accessSecretKey = "SP_ACCESS_SECRET";
+
+    public static final String userIdHeaderFieldKey = "SP_USER_ID_HEADER_FIELD";
+
+    public static final String userSignatureHeaderFieldKey = "SP_USER_SIGNATURE_HEADER_FIELD";
+
+    public static final String userSignVersionHeaderFieldKey = "SP_USER_SIGN_VERSION_HEADER_FIELD";
 
 
 

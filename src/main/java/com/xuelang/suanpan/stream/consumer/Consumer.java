@@ -1,14 +1,16 @@
 package com.xuelang.suanpan.stream.consumer;
 
+import com.alibaba.fastjson2.JSON;
 import com.xuelang.suanpan.common.ThreadPool;
-import com.xuelang.suanpan.common.exception.IllegalRequestException;
-import com.xuelang.suanpan.common.exception.InvocationHandlerException;
-import com.xuelang.suanpan.common.exception.NoSuchHandlerException;
-import com.xuelang.suanpan.domain.handler.HandlerProxy;
-import com.xuelang.suanpan.domain.handler.HandlerResponse;
-import com.xuelang.suanpan.stream.dto.MQResponse;
-import com.xuelang.suanpan.stream.dto.Message;
-import com.xuelang.suanpan.stream.dto.StreamContext;
+import com.xuelang.suanpan.exception.IllegalRequestException;
+import com.xuelang.suanpan.exception.InvocationHandlerException;
+import com.xuelang.suanpan.exception.NoSuchHandlerException;
+import com.xuelang.suanpan.stream.handler.HandlerProxy;
+import com.xuelang.suanpan.stream.handler.HandlerRequest;
+import com.xuelang.suanpan.stream.handler.HandlerResponse;
+import com.xuelang.suanpan.stream.message.MQResponse;
+import com.xuelang.suanpan.stream.message.Message;
+import com.xuelang.suanpan.stream.message.StreamContext;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.XAddArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -22,7 +24,11 @@ import org.apache.commons.collections4.CollectionUtils;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 public class Consumer {
@@ -60,6 +66,14 @@ public class Consumer {
      * 阻塞消费失败后，重新消费延时时间，单位毫秒
      */
     private long restartDelay = 1000L;
+
+    private volatile boolean isPolling;
+
+    private static final Lock lock = new ReentrantLock();
+    private static final Condition consumedData = lock.newCondition();
+
+    private volatile HandlerRequest pollingResponse;
+
     private StatefulRedisConnection<String, String> consumeConnection;
 
     private StatefulRedisConnection<String, String> sendConnection;
@@ -134,6 +148,21 @@ public class Consumer {
         }
     }
 
+    public HandlerRequest polling(long timeout, TimeUnit unit) {
+        lock.lock();
+        pollingResponse = null;
+        isPolling = true;
+        try {
+            consumedData.await(timeout, unit);
+            isPolling = false;
+            return pollingResponse;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public void doTask(HandlerProxy proxy) {
         CommandArgs<String, String> consumeArgs = new CommandArgs<>(StringCodec.UTF8)
                 .add(CommandKeyword.GROUP).add(this.group)
@@ -150,20 +179,22 @@ public class Consumer {
         ThreadPool.pool().submit(new Task(consumeArgs, proxy));
     }
 
-    private String publish(StreamContext streamContext) {
+    public String publish(StreamContext streamContext) {
         XAddArgs addArgs = XAddArgs.Builder.maxlen(streamContext.getMaxLength())
                 .approximateTrimming(streamContext.isApproximateTrimming());
         if (streamContext.isP2p()) {
             // TODO: 2024/3/13 p2p发送
             return null;
         } else {
-            RedisFuture<String> future =
-                    this.sendConnection.async().xadd(streamContext.getMasterQueue(), addArgs, streamContext.toMasterQueueData());
+            Object[] outData = streamContext.toMasterQueueData();
+            RedisFuture<String> future = this.sendConnection.async().xadd(streamContext.getMasterQueue(), addArgs, outData);
             try {
                 return future.get();
             } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+                log.error("publish message to MQ error", e);
                 return null;
+            } finally {
+                log.info("publish queue data:{}", JSON.toJSONString(outData));
             }
         }
     }
@@ -174,10 +205,11 @@ public class Consumer {
             xack.get();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
+            log.error("xack to MQ error", e);
         }
     }
 
-    class Task implements Runnable {
+    private class Task implements Runnable {
         final HandlerProxy proxy;
         final CommandArgs<String, String> args;
 
@@ -195,11 +227,10 @@ public class Consumer {
                 try {
                     //block get
                     List<Object> consumedObjects = future.get();
-                    log.info("received message: {}", consumedObjects.get(0).toString());
                     mqResponse = MQResponse.convert((List) consumedObjects.get(0));
                 } catch (InterruptedException | ExecutionException e) {
                     // TODO: 2024/3/13   发送消费异常事件
-                    e.printStackTrace();
+                    log.error("consume message from MQ error", e);
                     LockSupport.parkNanos(restartDelay * 1000000);
                     continue;
                 }
@@ -209,17 +240,27 @@ public class Consumer {
                     continue;
                 }
 
+                log.info("receive queue data:{}", JSON.toJSONString(messages));
                 messages.stream().forEach(message -> {
                     ThreadPool.pool().submit(() -> {
                         try {
-                            HandlerResponse handlerResponse = proxy.invoke(message.covert());
-                            if (handlerResponse != null && !handlerResponse.getOutPortDataMap().isEmpty()) {
-                                StreamContext streamContext = new StreamContext();
-                                streamContext.setExtra(message.getExtra());
-                                streamContext.setRequestId(message.getRequestId());
-                                streamContext.setSuccess(message.getSuccess());
-                                streamContext.setOutPortDataMap(handlerResponse.getOutPortDataMap());
-                                publish(streamContext);
+                            HandlerRequest request = message.covert();
+                            if (isPolling) {
+                                if (request != null) {
+                                    pollingResponse = request;
+                                    lock.lock();
+                                    consumedData.signal();
+                                }
+                            } else {
+                                HandlerResponse handlerResponse = proxy.invoke(request);
+                                if (handlerResponse != null && !handlerResponse.getOutPortDataMap().isEmpty()) {
+                                    StreamContext streamContext = new StreamContext();
+                                    streamContext.setExtra(message.getExtra());
+                                    streamContext.setRequestId(message.getRequestId());
+                                    streamContext.setSuccess(message.getSuccess());
+                                    streamContext.setOutPortDataMap(handlerResponse.getOutPortDataMap());
+                                    publish(streamContext);
+                                }
                             }
 
                             ack(queue, group, message.getMessageId());
@@ -229,6 +270,8 @@ public class Consumer {
                         } catch (InvocationHandlerException e) {
                             // TODO: 2024/3/18  发送事件到算盘平台
                             log.error("invoke suanpan handler error", e);
+                        } finally {
+                            lock.unlock();
                         }
                     });
                 });

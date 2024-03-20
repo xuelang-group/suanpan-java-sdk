@@ -1,8 +1,8 @@
-package com.xuelang.suanpan.stream.dto;
+package com.xuelang.suanpan.stream.message;
 
-import com.xuelang.suanpan.domain.handler.HandlerRequest;
-import com.xuelang.suanpan.domain.handler.InPortData;
-import com.xuelang.suanpan.domain.io.InPort;
+import com.xuelang.suanpan.stream.handler.HandlerRequest;
+import com.xuelang.suanpan.stream.handler.InPortData;
+import com.xuelang.suanpan.node.io.InPort;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -97,6 +97,9 @@ public class Message {
             msg.add(tmp);
         });
         request.setMsg(msg);
+        if (extra != null){
+            request.setExtra(extra);
+        }
         return request;
     }
 }

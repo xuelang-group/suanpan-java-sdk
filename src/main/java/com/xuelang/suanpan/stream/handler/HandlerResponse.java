@@ -1,7 +1,7 @@
-package com.xuelang.suanpan.domain.handler;
+package com.xuelang.suanpan.stream.handler;
 
-import com.xuelang.suanpan.configuration.SpEnv;
-import com.xuelang.suanpan.domain.io.OutPort;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.node.io.OutPort;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class HandlerResponse {
                 response.getNonSpecifiedOutPortDataList().add(data);
             } else {
                 OutPort outPort;
-                if ((outPort = SpEnv.getOutPortByIndex(outPortIndex)) == null) {
+                if ((outPort = ConstantConfiguration.getOutPortByIndex(outPortIndex)) == null) {
                     throw new RuntimeException("current component has no this outPort: " + "out" + outPortIndex);
                 }
 

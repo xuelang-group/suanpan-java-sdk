@@ -1,9 +1,8 @@
-package com.xuelang.suanpan.stream.dto;
+package com.xuelang.suanpan.stream.message;
 
-import com.alibaba.fastjson.JSON;
-import com.xuelang.suanpan.configuration.SpEnv;
-import com.xuelang.suanpan.domain.io.OutPort;
-import com.xuelang.suanpan.stream.dto.Extra;
+import com.alibaba.fastjson2.JSON;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.node.io.OutPort;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -16,11 +15,11 @@ public class StreamContext {
     private boolean success;
     private Extra extra;
     private Map<OutPort, Object> outPortDataMap;
-    private boolean p2p = SpEnv.getEnableP2pSend();
-    private String masterQueue = SpEnv.getSendMasterQueue();
-    private String nodeId = SpEnv.getNodeId();
-    private Long maxLength = SpEnv.getQueueMaxSendLen();
-    private boolean approximateTrimming = SpEnv.getQueueSendTrim();
+    private boolean p2p = ConstantConfiguration.getEnableP2pSend();
+    private String masterQueue = ConstantConfiguration.getSendMasterQueue();
+    private String nodeId = ConstantConfiguration.getNodeId();
+    private Long maxLength = ConstantConfiguration.getQueueMaxSendLen();
+    private boolean approximateTrimming = ConstantConfiguration.getQueueSendTrim();
 
     public Map<OutPort, Object> getOutPortDataMap() {
         return outPortDataMap;

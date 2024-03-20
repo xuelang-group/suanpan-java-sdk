@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.stream.dto;
+package com.xuelang.suanpan.stream.message;
 
 public class MessageSchemaConstants {
     public static final String RECV_TYPE_KEY = "ReceiveMsgType";

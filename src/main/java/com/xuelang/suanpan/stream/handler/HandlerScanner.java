@@ -1,12 +1,12 @@
-package com.xuelang.suanpan.domain.handler;
+package com.xuelang.suanpan.stream.handler;
 
 import com.xuelang.suanpan.annotation.AsyncHandlerMapping;
 import com.xuelang.suanpan.annotation.SuanpanHandler;
 import com.xuelang.suanpan.annotation.SyncHandlerMapping;
 import com.xuelang.suanpan.annotation.validator.HandlerRuntimeValidator;
-import com.xuelang.suanpan.configuration.SpEnv;
-import com.xuelang.suanpan.domain.io.InPort;
-import com.xuelang.suanpan.domain.io.OutPort;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.node.io.InPort;
+import com.xuelang.suanpan.node.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -37,7 +37,7 @@ public class HandlerScanner {
         for (Class<?> clazz : classes) {
             Annotation annotation = clazz.getAnnotation(SuanpanHandler.class);
             if (annotation != null) {
-                HandlerRuntimeValidator.validateHandlerPortValues(clazz, SpEnv.getMaxInPortIndex(), SpEnv.getMaxOutPortIndex());
+                HandlerRuntimeValidator.validateHandlerPortValues(clazz, ConstantConfiguration.getMaxInPortIndex(), ConstantConfiguration.getMaxOutPortIndex());
                 try {
                     Object instance = clazz.getDeclaredConstructor().newInstance();
 
@@ -54,21 +54,21 @@ public class HandlerScanner {
                             methodEntry.setSync(false);
                             List<OutPort> outPorts = new ArrayList<>();
                             for (int index : asyncHandlerMapping.default_outport_index()) {
-                                outPorts.add(SpEnv.getOutPortByIndex(index));
+                                outPorts.add(ConstantConfiguration.getOutPortByIndex(index));
                             }
                             methodEntry.setOutPorts(outPorts);
-                            instances.put(SpEnv.getInPortByIndex(asyncHandlerMapping.inport_index()), methodEntry);
+                            instances.put(ConstantConfiguration.getInPortByIndex(asyncHandlerMapping.inport_index()), methodEntry);
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                         } else {
                             SyncHandlerMapping syncHandlerMapping = method.getAnnotation(SyncHandlerMapping.class);
                             methodEntry.setSync(true);
                             List<OutPort> outPorts = new ArrayList<>();
                             for (int index : syncHandlerMapping.default_outport_index()) {
-                                outPorts.add(SpEnv.getOutPortByIndex(index));
+                                outPorts.add(ConstantConfiguration.getOutPortByIndex(index));
                             }
                             methodEntry.setOutPorts(outPorts);
                             for (int index : syncHandlerMapping.inport_index()) {
-                                instances.put(SpEnv.getInPortByIndex(index), methodEntry);
+                                instances.put(ConstantConfiguration.getInPortByIndex(index), methodEntry);
                             }
 
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
@@ -119,7 +119,7 @@ public class HandlerScanner {
             String mainClassName = stackTrace[stackTrace.length - 1].getClassName();
             return Class.forName(mainClassName);
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            log.error("get main class error", e);
         }
         throw new RuntimeException("Main class not found");
     }

@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.domain.proxr;
+package com.xuelang.suanpan.common;
 
 import java.util.Objects;
 

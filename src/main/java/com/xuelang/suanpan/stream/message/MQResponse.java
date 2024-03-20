@@ -1,8 +1,8 @@
-package com.xuelang.suanpan.stream.dto;
+package com.xuelang.suanpan.stream.message;
 
-import com.alibaba.fastjson.JSONObject;
-import com.xuelang.suanpan.configuration.SpEnv;
-import com.xuelang.suanpan.domain.io.InPort;
+import com.alibaba.fastjson2.JSONObject;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.node.io.InPort;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -72,7 +72,7 @@ public class MQResponse {
 
         tmpContentMap.keySet().stream().forEach(key->{
             InPort inPort;
-            if ((inPort = SpEnv.getInPortByUuid(key)) != null){
+            if ((inPort = ConstantConfiguration.getInPortByUuid(key)) != null){
                 // TODO: 2024/3/12 理论上接收的数据不应该带有数据类型，应该在发送时就根据输出端口转成对应的类型，在编排时就可以把下游组件的
                 // TODO: 2024/3/12 的输入端口类型和上游组件匹配，接收到的数据类型应该在发送时对类型做保证
                 /*if (tmpContentMap.get(key+MessageSchemaConstants.OUT_TYPE_KEY) != null){

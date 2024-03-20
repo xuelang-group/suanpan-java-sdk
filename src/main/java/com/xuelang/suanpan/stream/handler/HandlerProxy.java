@@ -1,11 +1,11 @@
-package com.xuelang.suanpan.domain.handler;
+package com.xuelang.suanpan.stream.handler;
 
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson2.JSON;
 import com.xuelang.suanpan.exception.IllegalRequestException;
 import com.xuelang.suanpan.exception.InvocationHandlerException;
 import com.xuelang.suanpan.exception.NoSuchHandlerException;
-import com.xuelang.suanpan.domain.io.InPort;
-import com.xuelang.suanpan.domain.io.OutPort;
+import com.xuelang.suanpan.node.io.InPort;
+import com.xuelang.suanpan.node.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -28,10 +28,10 @@ public class HandlerProxy {
      * @throws RuntimeException
      */
     public HandlerResponse invoke(HandlerRequest request) throws NoSuchHandlerException, IllegalRequestException, InvocationHandlerException {
+        log.info("received handler request: {}", JSON.toJSONString(request));
         if (request == null) {
             throw new IllegalRequestException("received message inport data is empty, can not invoke suanpan handler");
         }
-        log.info("invoke suanpan handler request: {}", JSON.toJSONString(request));
         InPort firstInPort = request.getMsg().get(0).getInPort();
         MethodEntry methodEntry;
         if ((methodEntry = PROXY_METHOD_ENTRY_MAP.get(firstInPort)) == null) {
@@ -49,7 +49,7 @@ public class HandlerProxy {
             throw new InvocationHandlerException("invoke suanpan handler error", e);
         }
 
-        log.info("invoke suanpan handler response:{}", JSON.toJSONString(response));
+        log.info("invoked handler response:{}", JSON.toJSONString(response));
         return response;
     }
 

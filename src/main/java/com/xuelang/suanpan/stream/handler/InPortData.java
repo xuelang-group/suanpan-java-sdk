@@ -1,6 +1,6 @@
-package com.xuelang.suanpan.domain.handler;
+package com.xuelang.suanpan.stream.handler;
 
-import com.xuelang.suanpan.domain.io.InPort;
+import com.xuelang.suanpan.node.io.InPort;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 

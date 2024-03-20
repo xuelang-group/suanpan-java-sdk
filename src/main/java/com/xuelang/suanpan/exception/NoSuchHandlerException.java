@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.common.exception;
+package com.xuelang.suanpan.exception;
 
 public class NoSuchHandlerException extends RuntimeException {
     public NoSuchHandlerException(String msg) {

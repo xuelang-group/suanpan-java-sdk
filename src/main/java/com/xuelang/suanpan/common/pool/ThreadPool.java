@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.common;
+package com.xuelang.suanpan.common.pool;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 

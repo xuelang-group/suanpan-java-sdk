@@ -2,7 +2,7 @@ package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.node.io.InPort;
+import com.xuelang.suanpan.entities.io.InPort;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * 从消息队列中消费消息的响应
  */
-public class MQResponse {
+public class MqResponse {
     /**
      * 消费的队列名称
      */
@@ -24,7 +24,7 @@ public class MQResponse {
      */
     private List<Message> messages;
 
-    public MQResponse(String queue, List<Message> messages) {
+    public MqResponse(String queue, List<Message> messages) {
         this.queue = queue;
         this.messages = messages;
     }
@@ -124,7 +124,7 @@ public class MQResponse {
      *                10) "{\"global\":{}}"
      * @return StreamMessage
      */
-    public static MQResponse convert(List metaMsg) {
+    public static MqResponse convert(List metaMsg) {
         String queue = (String) metaMsg.get(0);
         List<Message> messages = new ArrayList<>();
 
@@ -132,6 +132,6 @@ public class MQResponse {
         metaMessageList.forEach(metaMessage -> {
             parseMessage((List) metaMessage, messages);
         });
-        return new MQResponse(queue, messages);
+        return new MqResponse(queue, messages);
     }
 }

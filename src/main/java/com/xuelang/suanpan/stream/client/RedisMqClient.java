@@ -1,26 +1,29 @@
-package com.xuelang.suanpan.stream.consumer;
+package com.xuelang.suanpan.stream.client;
 
 import com.alibaba.fastjson2.JSON;
-import com.xuelang.suanpan.common.ThreadPool;
-import com.xuelang.suanpan.exception.IllegalRequestException;
-import com.xuelang.suanpan.exception.InvocationHandlerException;
-import com.xuelang.suanpan.exception.NoSuchHandlerException;
+import com.xuelang.suanpan.common.pool.ThreadPool;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.common.exception.IllegalRequestException;
+import com.xuelang.suanpan.common.exception.InvocationHandlerException;
+import com.xuelang.suanpan.common.exception.NoSuchHandlerException;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
 import com.xuelang.suanpan.stream.handler.HandlerRequest;
 import com.xuelang.suanpan.stream.handler.HandlerResponse;
-import com.xuelang.suanpan.stream.message.MQResponse;
+import com.xuelang.suanpan.stream.message.MqResponse;
 import com.xuelang.suanpan.stream.message.Message;
 import com.xuelang.suanpan.stream.message.StreamContext;
-import io.lettuce.core.RedisFuture;
-import io.lettuce.core.XAddArgs;
+import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.output.NestedMultiOutput;
+import io.lettuce.core.output.StatusOutput;
 import io.lettuce.core.protocol.CommandArgs;
 import io.lettuce.core.protocol.CommandKeyword;
 import io.lettuce.core.protocol.CommandType;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -31,123 +34,114 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
-public class Consumer {
+public class RedisMqClient extends AbstractMqClient {
+    private final String SEARCH_MSG = "BUSYGROUP Consumer Group name already exists";
     /**
      * 消费者群组
      */
     private String group = "default";
-
     /**
      * 消费者名称
      */
     private String name = "unknown";
-
     /**
      * 单次消费条数，默认消费一条
      */
     private long count = 1L;
-
     /**
      * 是否无ACK，默认false
      */
     private boolean noAck;
-
     /**
      * 消费者要消费的队列
      */
     private String queue;
-
     /**
      * 上次消费到的消息id，如果使用">"则代表要消费最新的消息
      */
     private String consumedMessageId = ">";
-
     /**
      * 阻塞消费失败后，重新消费延时时间，单位毫秒
      */
     private long restartDelay = 1000L;
-
     private volatile boolean isPolling;
-
+    private volatile HandlerRequest pollingResponse;
+    private final RedisClient client;
+    private final StatefulRedisConnection<String, String> consumeConnection;
+    private final StatefulRedisConnection<String, String> sendConnection;
     private static final Lock lock = new ReentrantLock();
     private static final Condition consumedData = lock.newCondition();
 
-    private volatile HandlerRequest pollingResponse;
-
-    private StatefulRedisConnection<String, String> consumeConnection;
-
-    private StatefulRedisConnection<String, String> sendConnection;
-
-    public void setConsumeConnection(StatefulRedisConnection<String, String> consumeConnection) {
-        this.consumeConnection = consumeConnection;
-    }
-
-    public void setSendConnection(StatefulRedisConnection<String, String> sendConnection) {
-        this.sendConnection = sendConnection;
-    }
-
-    public String getGroup() {
-        return group;
-    }
-
     public void setGroup(String group) {
         this.group = group;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public void setName(String name) {
         this.name = name;
     }
 
-    public long getCount() {
-        return count;
-    }
-
     public void setCount(long count) {
         this.count = count;
-    }
-
-    public boolean isNoAck() {
-        return noAck;
     }
 
     public void setNoAck(boolean noAck) {
         this.noAck = noAck;
     }
 
-    public String getQueue() {
-        return queue;
-    }
-
     public void setQueue(String queue) {
         this.queue = queue;
-    }
-
-    public String getConsumedMessageId() {
-        return consumedMessageId;
     }
 
     public void setConsumedMessageId(String consumedMessageId) {
         this.consumedMessageId = consumedMessageId;
     }
 
-    public long getRestartDelay() {
-        return restartDelay;
-    }
-
     public void setRestartDelay(long restartDelay) {
         this.restartDelay = restartDelay;
     }
 
+    public RedisMqClient(HandlerProxy proxy) {
+        RedisURI uri = RedisURI.Builder.redis(ConstantConfiguration.getStreamHost(), ConstantConfiguration.getStreamPort()).withPassword("123456").build();
+        this.client = RedisClient.create(uri);
+        this.client.setOptions(ClientOptions.builder().autoReconnect(true).pingBeforeActivateConnection(true).build());
+        this.consumeConnection = this.client.connect();
+        this.sendConnection = this.client.connect();
+        this.proxy = proxy;
+    }
+
+    public void initConsumerGroup(){
+        CommandArgs<String, String> args = new CommandArgs<>(StringCodec.UTF8)
+                .add(CommandKeyword.CREATE)
+                .add(queue)
+                .add(group)
+                .add("0")
+                .add("MKSTREAM");
+        RedisAsyncCommands<String, String> commands = this.consumeConnection.async();
+        RedisFuture<String> future = commands.dispatch(CommandType.XGROUP, new StatusOutput<>(StringCodec.UTF8), args);
+        try {
+            future.get();
+        } catch (ExecutionException e) {
+            if (StringUtils.containsIgnoreCase(e.getMessage(), SEARCH_MSG)) {
+                return;
+            }
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
     public void destroy() {
         if (this.consumeConnection != null) {
             this.consumeConnection.close();
         }
+
+        if (this.sendConnection != null) {
+            this.sendConnection.close();
+        }
     }
 
+    @Override
     public HandlerRequest polling(long timeout, TimeUnit unit) {
         lock.lock();
         pollingResponse = null;
@@ -163,7 +157,8 @@ public class Consumer {
         }
     }
 
-    public void doTask(HandlerProxy proxy) {
+    @Override
+    public void infiniteConsume() {
         CommandArgs<String, String> consumeArgs = new CommandArgs<>(StringCodec.UTF8)
                 .add(CommandKeyword.GROUP).add(this.group)
                 .add(this.name)
@@ -176,9 +171,10 @@ public class Consumer {
             consumeArgs.add(CommandKeyword.NOACK);
         }
 
-        ThreadPool.pool().submit(new Task(consumeArgs, proxy));
+        ThreadPool.pool().submit(new InfiniteConsumeTask(consumeArgs, proxy));
     }
 
+    @Override
     public String publish(StreamContext streamContext) {
         XAddArgs addArgs = XAddArgs.Builder.maxlen(streamContext.getMaxLength())
                 .approximateTrimming(streamContext.isApproximateTrimming());
@@ -209,11 +205,11 @@ public class Consumer {
         }
     }
 
-    private class Task implements Runnable {
+    private class InfiniteConsumeTask implements Runnable {
         final HandlerProxy proxy;
         final CommandArgs<String, String> args;
 
-        public Task(CommandArgs<String, String> args, HandlerProxy proxy) {
+        public InfiniteConsumeTask(CommandArgs<String, String> args, HandlerProxy proxy) {
             this.proxy = proxy;
             this.args = args;
         }
@@ -223,11 +219,11 @@ public class Consumer {
             log.info("suanpan sdk start consume queue msg ...");
             while (true) {
                 RedisFuture<List<Object>> future = consumeConnection.async().dispatch(CommandType.XREADGROUP, new NestedMultiOutput<>(StringCodec.UTF8), args);
-                MQResponse mqResponse = null;
+                MqResponse mqResponse = null;
                 try {
                     //block get
                     List<Object> consumedObjects = future.get();
-                    mqResponse = MQResponse.convert((List) consumedObjects.get(0));
+                    mqResponse = MqResponse.convert((List) consumedObjects.get(0));
                 } catch (InterruptedException | ExecutionException e) {
                     // TODO: 2024/3/13   发送消费异常事件
                     log.error("consume message from MQ error", e);

@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.common;
+package com.xuelang.suanpan.entities;
 
 import java.util.Objects;
 

@@ -1,7 +1,7 @@
-package com.xuelang.suanpan.node.io;
+package com.xuelang.suanpan.entities.io;
 
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.exception.NoSuchInPortException;
+import com.xuelang.suanpan.common.exception.NoSuchInPortException;
 
 import java.util.Objects;
 

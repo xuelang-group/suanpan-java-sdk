@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.common;
+package com.xuelang.suanpan.common.utils;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class HttpUtils {
+public class HttpUtil {
     static class InstanceHolder {
         private static final OkHttpClient instance = createClient();
     }

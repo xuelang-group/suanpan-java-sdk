@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.node.io;
+package com.xuelang.suanpan.entities.io;
 
 /**
  * inPorts: [       // 输入桩

@@ -1,10 +1,10 @@
 package com.xuelang.suanpan.stream.handler;
 
-import com.xuelang.suanpan.node.io.OutPort;
+import com.xuelang.suanpan.entities.io.OutPort;
 import java.lang.reflect.Method;
 import java.util.List;
 
-public class MethodEntry<T> {
+public class HandlerMethodEntry<T> {
     private T instance;
     private Method method;
     private boolean sync;

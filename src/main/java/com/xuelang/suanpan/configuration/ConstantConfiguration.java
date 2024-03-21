@@ -3,12 +3,12 @@ package com.xuelang.suanpan.configuration;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.xuelang.suanpan.common.HttpUtils;
-import com.xuelang.suanpan.exception.NoSuchInPortException;
-import com.xuelang.suanpan.node.connection.Connection;
-import com.xuelang.suanpan.node.io.InPort;
-import com.xuelang.suanpan.node.io.NodeReceiveMsgType;
-import com.xuelang.suanpan.node.io.OutPort;
+import com.xuelang.suanpan.common.utils.HttpUtil;
+import com.xuelang.suanpan.common.exception.NoSuchInPortException;
+import com.xuelang.suanpan.entities.connection.Connection;
+import com.xuelang.suanpan.entities.io.InPort;
+import com.xuelang.suanpan.entities.enums.NodeReceiveMsgType;
+import com.xuelang.suanpan.entities.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -189,12 +189,12 @@ public class ConstantConfiguration {
         String userIdHeaderField = (String) get(ConfigurationKeys.userIdHeaderFieldKey, "x-sp-user-id");
         String userSignatureHeaderField = (String) get(ConfigurationKeys.userSignatureHeaderFieldKey, "x-sp-signature");
         String userSignVersionHeaderField = (String) get(ConfigurationKeys.userSignVersionHeaderFieldKey, "x-sp-sign-version");
-        String signature = HttpUtils.signature(secret, userId);
+        String signature = HttpUtil.signature(secret, userId);
         Map<String, String> headers = new HashMap<>();
         headers.put(userIdHeaderField, userId);
         headers.put(userSignatureHeaderField, signature);
         headers.put(userSignVersionHeaderField, "v1");
-        return HttpUtils.sendGet(protocol, spHost, spPort, "app/graph/" + appId, headers, null);
+        return HttpUtil.sendGet(protocol, spHost, spPort, "app/graph/" + appId, headers, null);
     }
 
     public static String getAppId() {
@@ -286,7 +286,7 @@ public class ConstantConfiguration {
         return value != null ? Integer.valueOf(value.toString()) : null;
     }
 
-    private static Object get(String key, @Nullable Object defaultValue) {
+    public static Object get(String key, @Nullable Object defaultValue) {
         Objects.requireNonNull(key, "key cannot be null");
         String value = System.getenv(key);
         if (StringUtils.isNotBlank(value)) {

@@ -1,7 +1,7 @@
 package com.xuelang.suanpan.stream.handler;
 
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.node.io.OutPort;
+import com.xuelang.suanpan.entities.io.OutPort;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

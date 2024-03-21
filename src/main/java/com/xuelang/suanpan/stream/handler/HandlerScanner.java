@@ -5,8 +5,8 @@ import com.xuelang.suanpan.annotation.SuanpanHandler;
 import com.xuelang.suanpan.annotation.SyncHandlerMapping;
 import com.xuelang.suanpan.annotation.validator.HandlerRuntimeValidator;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.node.io.InPort;
-import com.xuelang.suanpan.node.io.OutPort;
+import com.xuelang.suanpan.entities.io.InPort;
+import com.xuelang.suanpan.entities.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -21,8 +21,8 @@ public class HandlerScanner {
 
     private static final String CLASS_FILE_EXTENSION = ".class";
 
-    public static Map<InPort, MethodEntry> scan() {
-        Map<InPort, MethodEntry> instances = new HashMap<>();
+    public static Map<InPort, HandlerMethodEntry> scan() {
+        Map<InPort, HandlerMethodEntry> instances = new HashMap<>();
         Class<?> mainClass = getMainClass();
         String mainPackage = getPackageName(mainClass);
         log.info("suanpan sdk begin scan main package: {} to create suanpan handlers", mainPackage);
@@ -34,7 +34,7 @@ public class HandlerScanner {
         }
 
         // 找到带有指定注解的类，并实例化
-        for (Class<?> clazz : classes) {
+        classes.stream().parallel().forEach(clazz -> {
             Annotation annotation = clazz.getAnnotation(SuanpanHandler.class);
             if (annotation != null) {
                 HandlerRuntimeValidator.validateHandlerPortValues(clazz, ConstantConfiguration.getMaxInPortIndex(), ConstantConfiguration.getMaxOutPortIndex());
@@ -46,29 +46,29 @@ public class HandlerScanner {
                             || method.isAnnotationPresent(SyncHandlerMapping.class))).collect(Collectors.toList());
 
                     for (Method method : filteredMethods) {
-                        MethodEntry methodEntry = new MethodEntry();
-                        methodEntry.setInstance(instance);
-                        methodEntry.setMethod(method);
+                        HandlerMethodEntry handlerMethodEntry = new HandlerMethodEntry();
+                        handlerMethodEntry.setInstance(instance);
+                        handlerMethodEntry.setMethod(method);
                         if (method.isAnnotationPresent(AsyncHandlerMapping.class)) {
                             AsyncHandlerMapping asyncHandlerMapping = method.getAnnotation(AsyncHandlerMapping.class);
-                            methodEntry.setSync(false);
+                            handlerMethodEntry.setSync(false);
                             List<OutPort> outPorts = new ArrayList<>();
                             for (int index : asyncHandlerMapping.default_outport_index()) {
                                 outPorts.add(ConstantConfiguration.getOutPortByIndex(index));
                             }
-                            methodEntry.setOutPorts(outPorts);
-                            instances.put(ConstantConfiguration.getInPortByIndex(asyncHandlerMapping.inport_index()), methodEntry);
+                            handlerMethodEntry.setOutPorts(outPorts);
+                            instances.put(ConstantConfiguration.getInPortByIndex(asyncHandlerMapping.inport_index()), handlerMethodEntry);
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                         } else {
                             SyncHandlerMapping syncHandlerMapping = method.getAnnotation(SyncHandlerMapping.class);
-                            methodEntry.setSync(true);
+                            handlerMethodEntry.setSync(true);
                             List<OutPort> outPorts = new ArrayList<>();
                             for (int index : syncHandlerMapping.default_outport_index()) {
                                 outPorts.add(ConstantConfiguration.getOutPortByIndex(index));
                             }
-                            methodEntry.setOutPorts(outPorts);
+                            handlerMethodEntry.setOutPorts(outPorts);
                             for (int index : syncHandlerMapping.inport_index()) {
-                                instances.put(ConstantConfiguration.getInPortByIndex(index), methodEntry);
+                                instances.put(ConstantConfiguration.getInPortByIndex(index), handlerMethodEntry);
                             }
 
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
@@ -78,7 +78,7 @@ public class HandlerScanner {
                     throw new RuntimeException(e);
                 }
             }
-        }
+        });
 
         return instances;
     }

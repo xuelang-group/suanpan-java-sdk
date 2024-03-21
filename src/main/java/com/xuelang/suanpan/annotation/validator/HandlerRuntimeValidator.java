@@ -3,7 +3,7 @@ package com.xuelang.suanpan.annotation.validator;
 import com.xuelang.suanpan.annotation.AsyncHandlerMapping;
 import com.xuelang.suanpan.annotation.SyncHandlerMapping;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.node.io.NodeReceiveMsgType;
+import com.xuelang.suanpan.entities.enums.NodeReceiveMsgType;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;

@@ -1,11 +1,11 @@
 package com.xuelang.suanpan.stream.handler;
 
 import com.alibaba.fastjson2.JSON;
-import com.xuelang.suanpan.exception.IllegalRequestException;
-import com.xuelang.suanpan.exception.InvocationHandlerException;
-import com.xuelang.suanpan.exception.NoSuchHandlerException;
-import com.xuelang.suanpan.node.io.InPort;
-import com.xuelang.suanpan.node.io.OutPort;
+import com.xuelang.suanpan.common.exception.IllegalRequestException;
+import com.xuelang.suanpan.common.exception.InvocationHandlerException;
+import com.xuelang.suanpan.common.exception.NoSuchHandlerException;
+import com.xuelang.suanpan.entities.io.InPort;
+import com.xuelang.suanpan.entities.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -16,10 +16,10 @@ import java.util.Map;
 
 @Slf4j
 public class HandlerProxy {
-    private final Map<InPort, MethodEntry> PROXY_METHOD_ENTRY_MAP;
+    private final Map<InPort, HandlerMethodEntry> registry;
 
     public HandlerProxy() {
-        PROXY_METHOD_ENTRY_MAP = HandlerScanner.scan();
+        registry = HandlerScanner.scan();
     }
 
     /**
@@ -33,16 +33,16 @@ public class HandlerProxy {
             throw new IllegalRequestException("received message inport data is empty, can not invoke suanpan handler");
         }
         InPort firstInPort = request.getMsg().get(0).getInPort();
-        MethodEntry methodEntry;
-        if ((methodEntry = PROXY_METHOD_ENTRY_MAP.get(firstInPort)) == null) {
+        HandlerMethodEntry handlerMethodEntry;
+        if ((handlerMethodEntry = registry.get(firstInPort)) == null) {
             // TODO: 2024/3/12 发送事件到平台
             throw new NoSuchHandlerException("there is no handler for inport: " + firstInPort.getUuid());
         }
 
         HandlerResponse response = null;
         try {
-            response = (HandlerResponse) methodEntry.getMethod().invoke(methodEntry.getInstance(), request);
-            merge(response.getNonSpecifiedOutPortDataList(), methodEntry.getOutPorts(), response.getOutPortDataMap());
+            response = (HandlerResponse) handlerMethodEntry.getMethod().invoke(handlerMethodEntry.getInstance(), request);
+            merge(response.getNonSpecifiedOutPortDataList(), handlerMethodEntry.getOutPorts(), response.getOutPortDataMap());
         } catch (IllegalAccessException e) {
             throw new InvocationHandlerException("invoke suanpan handler error", e);
         } catch (InvocationTargetException e) {

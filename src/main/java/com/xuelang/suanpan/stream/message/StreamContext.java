@@ -2,7 +2,7 @@ package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSON;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.node.io.OutPort;
+import com.xuelang.suanpan.entities.io.OutPort;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;

@@ -1,8 +1,7 @@
 package com.xuelang.suanpan.stream.message;
 
 import com.xuelang.suanpan.stream.handler.HandlerRequest;
-import com.xuelang.suanpan.stream.handler.InPortData;
-import com.xuelang.suanpan.node.io.InPort;
+import com.xuelang.suanpan.entities.io.InPort;
 
 import java.util.ArrayList;
 import java.util.HashMap;

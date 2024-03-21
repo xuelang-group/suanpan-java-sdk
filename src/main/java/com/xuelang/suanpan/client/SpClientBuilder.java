@@ -1,7 +1,7 @@
 package com.xuelang.suanpan.client;
 
-import com.xuelang.suanpan.common.BaseSpDomainEntity;
-import com.xuelang.suanpan.common.ProxrConnectionParam;
+import com.xuelang.suanpan.entities.BaseSpDomainEntity;
+import com.xuelang.suanpan.entities.ProxrConnectionParam;
 import com.xuelang.suanpan.configuration.Configuration;
 import com.xuelang.suanpan.event.Event;
 import com.xuelang.suanpan.service.Service;

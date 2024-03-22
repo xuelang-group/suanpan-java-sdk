@@ -2,13 +2,12 @@ package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSON;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.entities.io.OutPort;
+import com.xuelang.suanpan.common.entities.connection.Connection;
+import com.xuelang.suanpan.common.entities.io.OutPort;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class StreamContext {
     private String requestId;
@@ -16,7 +15,7 @@ public class StreamContext {
     private Extra extra;
     private Map<OutPort, Object> outPortDataMap;
     private boolean p2p = ConstantConfiguration.getEnableP2pSend();
-    private String masterQueue = ConstantConfiguration.getSendMasterQueue();
+    private String sendQueue = ConstantConfiguration.getSendMasterQueue();
     private String nodeId = ConstantConfiguration.getNodeId();
     private Long maxLength = ConstantConfiguration.getQueueMaxSendLen();
     private boolean approximateTrimming = ConstantConfiguration.getQueueSendTrim();
@@ -33,8 +32,12 @@ public class StreamContext {
         return p2p;
     }
 
-    public String getMasterQueue() {
-        return masterQueue;
+    public String getSendQueue() {
+        return sendQueue;
+    }
+
+    public void setSendQueue(String sendQueue) {
+        this.sendQueue = sendQueue;
     }
 
     public String getRequestId() {
@@ -94,10 +97,64 @@ public class StreamContext {
             list.add("extra");
             list.add(JSON.toJSONString(this.extra));
         }
-        outPortDataMap.keySet().stream().forEach(key->{
+        outPortDataMap.keySet().stream().forEach(key -> {
             list.add(key.getUuid());
             list.add(JSON.toJSONString(outPortDataMap.get(key)));
         });
         return list.toArray();
+    }
+
+    public Map<String, Object[]> toP2PQueueData() {
+        Map<String, List<Object>> tmpResult = new HashMap<>();
+        List<Object> commonInfo = new ArrayList<>();
+        if (StringUtils.isNotBlank(this.nodeId)) {
+            commonInfo.add("node_id");
+            commonInfo.add(this.nodeId);
+        }
+        if (StringUtils.isNotBlank(this.requestId)) {
+            commonInfo.add("request_id");
+            commonInfo.add(this.requestId);
+        }
+        commonInfo.add("max_length");
+        commonInfo.add(this.maxLength.toString());
+        commonInfo.add("approximate_trimming");
+        commonInfo.add(String.valueOf(this.approximateTrimming));
+        commonInfo.add("success");
+        commonInfo.add(String.valueOf(this.success));
+        if (this.extra != null) {
+            commonInfo.add("extra");
+            commonInfo.add(JSON.toJSONString(this.extra));
+        }
+
+        outPortDataMap.keySet().stream().forEach(outPort -> {
+            String outPortData = JSON.toJSONString(outPortDataMap.get(outPort));
+            List<Connection> tgtConnections = ConstantConfiguration.getConnections(outPort);
+            if (!CollectionUtils.isEmpty(tgtConnections)){
+                tgtConnections.stream().forEach(connection -> {
+                    String tgtSendQueue = connection.getTgtQueue();
+                    tmpResult.compute(tgtSendQueue, (inPortUUID, existedList)->{
+                        if (existedList == null){
+                            existedList = new ArrayList<>();
+                            existedList.addAll(commonInfo);
+                        }
+
+                        existedList.add(connection.getTgtInPortUUID());
+                        existedList.add(outPortData);
+                        return existedList;
+                    });
+                });
+            }
+        });
+
+        if (tmpResult.isEmpty()){
+            return null;
+        }
+
+        Map<String, Object[]> result = new HashMap<>();
+        tmpResult.entrySet().stream().forEach(entry->{
+            result.put(entry.getKey(), entry.getValue().toArray());
+        });
+
+        return result;
     }
 }

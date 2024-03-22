@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * 从消息队列中消费消息的响应
  */
-public class MqResponse {
+public class MetaMessage {
     /**
      * 消费的队列名称
      */
@@ -22,22 +22,22 @@ public class MqResponse {
     /**
      * 消费到的消息列表
      */
-    private List<Message> messages;
+    private List<InBoundMessage> inBoundMessageMessages;
 
-    public MqResponse(String queue, List<Message> messages) {
+    public MetaMessage(String queue, List<InBoundMessage> inBoundMessageMessages) {
         this.queue = queue;
-        this.messages = messages;
+        this.inBoundMessageMessages = inBoundMessageMessages;
     }
 
     public String getQueue() {
         return queue;
     }
 
-    public List<Message> getMessages() {
-        return messages;
+    public List<InBoundMessage> getMessages() {
+        return inBoundMessageMessages;
     }
 
-    private static void parseMessage(List metaMessageList, List<Message> messages) {
+    private static void parseMessage(List metaMessageList, List<InBoundMessage> inBoundMessageMessages) {
         String messageId = (String) metaMessageList.get(0);
         Map<String, Object> tmpContentMap = new HashMap<>();
         List contentList = (List) metaMessageList.get(1);
@@ -47,37 +47,38 @@ public class MqResponse {
             tmpContentMap.put(key, value);
         }
 
-        Message message = new Message();
-        message.setMessageId(messageId);
-        if(tmpContentMap.get(MessageSchemaConstants.RECV_TYPE_KEY) != null){
-            message.setReceiveMsgType((String) tmpContentMap.get(MessageSchemaConstants.RECV_TYPE_KEY));
-            tmpContentMap.remove(MessageSchemaConstants.RECV_TYPE_KEY);
+        InBoundMessage inBoundMessage = new InBoundMessage();
+        inBoundMessage.setMessageId(messageId);
+        if (tmpContentMap.get(MessageConstants.REQUEST_ID_KEY) != null) {
+            inBoundMessage.setRequestId((String) tmpContentMap.get(MessageConstants.REQUEST_ID_KEY));
+            tmpContentMap.remove(MessageConstants.REQUEST_ID_KEY);
         }
-        if(tmpContentMap.get(MessageSchemaConstants.REQUEST_ID_KEY) != null){
-            message.setRequestId((String) tmpContentMap.get(MessageSchemaConstants.REQUEST_ID_KEY));
-            tmpContentMap.remove(MessageSchemaConstants.REQUEST_ID_KEY);
+        if (tmpContentMap.get(MessageConstants.REQUEST_ID_ALIAS_KEY) != null) {
+            inBoundMessage.setRequestId((String) tmpContentMap.get(MessageConstants.REQUEST_ID_ALIAS_KEY));
+            tmpContentMap.remove(MessageConstants.REQUEST_ID_ALIAS_KEY);
         }
-        if(tmpContentMap.get(MessageSchemaConstants.REQUEST_ID_ALIAS_KEY) != null){
-            message.setRequestId((String) tmpContentMap.get(MessageSchemaConstants.REQUEST_ID_ALIAS_KEY));
-            tmpContentMap.remove(MessageSchemaConstants.REQUEST_ID_ALIAS_KEY);
-        }
-        if(tmpContentMap.get(MessageSchemaConstants.EXTRA_KEY) != null){
-            Extra extra = JSONObject.parseObject((String) tmpContentMap.get(MessageSchemaConstants.EXTRA_KEY), Extra.class);
-            if (extra == null){
+        if (tmpContentMap.get(MessageConstants.EXTRA_KEY) != null) {
+            Extra extra = JSONObject.parseObject((String) tmpContentMap.get(MessageConstants.EXTRA_KEY), Extra.class);
+            if (extra == null) {
                 extra = new Extra();
             }
             extra.append(ConstantConfiguration.getNodeId());
-            message.setExtra(extra);
-            tmpContentMap.remove(MessageSchemaConstants.EXTRA_KEY);
-        }
-        if(tmpContentMap.get(MessageSchemaConstants.SUCCESS_KEY) != null){
-            message.setSuccess(Boolean.valueOf((String) tmpContentMap.get(MessageSchemaConstants.SUCCESS_KEY)));
-            tmpContentMap.remove(MessageSchemaConstants.SUCCESS_KEY);
+            inBoundMessage.setExtra(extra);
+            tmpContentMap.remove(MessageConstants.EXTRA_KEY);
+        } else {
+            Extra extra = new Extra();
+            extra.append(ConstantConfiguration.getNodeId());
+            inBoundMessage.setExtra(extra);
         }
 
-        tmpContentMap.keySet().stream().forEach(key->{
+        if (tmpContentMap.get(MessageConstants.SUCCESS_KEY) != null) {
+            inBoundMessage.setSuccess(Boolean.valueOf((String) tmpContentMap.get(MessageConstants.SUCCESS_KEY)));
+            tmpContentMap.remove(MessageConstants.SUCCESS_KEY);
+        }
+
+        tmpContentMap.keySet().stream().forEach(key -> {
             InPort inPort;
-            if ((inPort = ConstantConfiguration.getInPortByUuid(key)) != null){
+            if ((inPort = ConstantConfiguration.getInPortByUuid(key)) != null) {
                 // TODO: 2024/3/12 理论上接收的数据不应该带有数据类型，应该在发送时就根据输出端口转成对应的类型，在编排时就可以把下游组件的
                 // TODO: 2024/3/12 的输入端口类型和上游组件匹配，接收到的数据类型应该在发送时对类型做保证
                 /*if (tmpContentMap.get(key+MessageSchemaConstants.OUT_TYPE_KEY) != null){
@@ -92,11 +93,11 @@ public class MqResponse {
 
                 }*/
 
-                message.append(inPort, tmpContentMap.get(key));
+                inBoundMessage.append(inPort, tmpContentMap.get(key));
             }
         });
 
-        messages.add(message);
+        inBoundMessageMessages.add(inBoundMessage);
     }
 
     /**
@@ -129,14 +130,14 @@ public class MqResponse {
      *                10) "{\"global\":{}}"
      * @return StreamMessage
      */
-    public static MqResponse convert(List metaMsg) {
+    public static MetaMessage convert(List metaMsg) {
         String queue = (String) metaMsg.get(0);
-        List<Message> messages = new ArrayList<>();
+        List<InBoundMessage> inBoundMessageMessages = new ArrayList<>();
 
         List metaMessageList = (List) metaMsg.get(1);
         metaMessageList.forEach(metaMessage -> {
-            parseMessage((List) metaMessage, messages);
+            parseMessage((List) metaMessage, inBoundMessageMessages);
         });
-        return new MqResponse(queue, messages);
+        return new MetaMessage(queue, inBoundMessageMessages);
     }
 }

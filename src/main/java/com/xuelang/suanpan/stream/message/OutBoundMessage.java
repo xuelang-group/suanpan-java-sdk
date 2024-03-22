@@ -9,13 +9,10 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 
-public class StreamContext {
-    private String requestId;
-    private boolean success;
-    private Extra extra;
+public class OutBoundMessage extends Context {
     private Map<OutPort, Object> outPortDataMap;
     private boolean p2p = ConstantConfiguration.getEnableP2pSend();
-    private String sendQueue = ConstantConfiguration.getSendMasterQueue();
+    private String sendMasterQueue = ConstantConfiguration.getSendMasterQueue();
     private String nodeId = ConstantConfiguration.getNodeId();
     private Long maxLength = ConstantConfiguration.getQueueMaxSendLen();
     private boolean approximateTrimming = ConstantConfiguration.getQueueSendTrim();
@@ -32,12 +29,8 @@ public class StreamContext {
         return p2p;
     }
 
-    public String getSendQueue() {
-        return sendQueue;
-    }
-
-    public void setSendQueue(String sendQueue) {
-        this.sendQueue = sendQueue;
+    public String getSendMasterQueue() {
+        return sendMasterQueue;
     }
 
     public String getRequestId() {

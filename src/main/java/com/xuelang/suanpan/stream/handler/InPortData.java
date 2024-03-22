@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.stream.message;
+package com.xuelang.suanpan.stream.handler;
 
 import com.xuelang.suanpan.common.entities.io.InPort;
 import org.apache.commons.lang3.builder.ToStringBuilder;

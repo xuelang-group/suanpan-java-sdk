@@ -1,6 +1,6 @@
 package com.xuelang.suanpan.stream.message;
 
-public class MessageSchemaConstants {
+public class MessageConstants {
     public static final String RECV_TYPE_KEY = "ReceiveMsgType";
     public static final String REQUEST_ID_KEY = "request_id";
     public static final String REQUEST_ID_ALIAS_KEY = "id";

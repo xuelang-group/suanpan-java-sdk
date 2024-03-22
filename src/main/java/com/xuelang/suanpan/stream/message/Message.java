@@ -1,13 +1,15 @@
 package com.xuelang.suanpan.stream.message;
 
 import com.xuelang.suanpan.stream.handler.HandlerRequest;
-import com.xuelang.suanpan.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.InPort;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class Message {
     /**
      * 在stream队列中的id
@@ -96,9 +98,17 @@ public class Message {
             msg.add(tmp);
         });
         request.setMsg(msg);
-        if (extra != null){
+        if (extra != null) {
             request.setExtra(extra);
         }
         return request;
+    }
+
+    public boolean isExpired() {
+        if (extra == null) {
+            return false;
+        }
+
+        return extra.isExpired();
     }
 }

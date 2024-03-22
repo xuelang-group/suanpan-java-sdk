@@ -2,7 +2,7 @@ package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.InPort;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,7 +62,12 @@ public class MqResponse {
             tmpContentMap.remove(MessageSchemaConstants.REQUEST_ID_ALIAS_KEY);
         }
         if(tmpContentMap.get(MessageSchemaConstants.EXTRA_KEY) != null){
-            message.setExtra(JSONObject.parseObject((String) tmpContentMap.get(MessageSchemaConstants.EXTRA_KEY), Extra.class));
+            Extra extra = JSONObject.parseObject((String) tmpContentMap.get(MessageSchemaConstants.EXTRA_KEY), Extra.class);
+            if (extra == null){
+                extra = new Extra();
+            }
+            extra.append(ConstantConfiguration.getNodeId());
+            message.setExtra(extra);
             tmpContentMap.remove(MessageSchemaConstants.EXTRA_KEY);
         }
         if(tmpContentMap.get(MessageSchemaConstants.SUCCESS_KEY) != null){

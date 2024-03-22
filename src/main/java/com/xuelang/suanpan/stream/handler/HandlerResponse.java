@@ -1,7 +1,8 @@
 package com.xuelang.suanpan.stream.handler;
 
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.entities.io.OutPort;
+import com.xuelang.suanpan.common.entities.io.OutPort;
+import org.apache.commons.collections4.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 public class HandlerResponse {
+    private Long validitySeconds;
     private Map<OutPort, Object> outPortDataMap = new HashMap<>();
     private List<Object> nonSpecifiedOutPortDataList = new ArrayList<>();
 
@@ -22,6 +24,33 @@ public class HandlerResponse {
 
     public List<Object> getNonSpecifiedOutPortDataList() {
         return nonSpecifiedOutPortDataList;
+    }
+
+    public Long getValiditySeconds() {
+        return validitySeconds;
+    }
+
+    public void merge(List<OutPort> specifiedDefaultOutPorts) {
+        if (!CollectionUtils.isEmpty(nonSpecifiedOutPortDataList) && !CollectionUtils.isEmpty(specifiedDefaultOutPorts)) {
+            if (outPortDataMap == null || outPortDataMap.isEmpty()) {
+                for (Object outPortItem : specifiedDefaultOutPorts) {
+                    outPortDataMap.put((OutPort) outPortItem, nonSpecifiedOutPortDataList);
+                }
+            } else {
+                for (Object outPortItem : specifiedDefaultOutPorts) {
+                    List<Object> result = new ArrayList<>();
+                    Object origin = outPortDataMap.get((OutPort) outPortItem);
+                    if (origin != null){
+                        result.add(origin);
+                    }
+
+                    nonSpecifiedOutPortDataList.stream().forEach(item->{
+                        result.add(item);
+                    });
+                    outPortDataMap.put((OutPort) outPortItem, result);
+                }
+            }
+        }
     }
 
     public static class ResponseBuilder{
@@ -42,8 +71,16 @@ public class HandlerResponse {
             return this;
         }
 
-
-        public HandlerResponse build(){
+        /**
+         * 构建response方法
+         * @param validitySeconds 消息的有效期时间，单位秒；
+         * @return
+         */
+        public HandlerResponse build(@Nullable Long validitySeconds ){
+            if (validitySeconds!=null && validitySeconds<=0){
+                throw new IllegalArgumentException("validitySeconds can not be negative number!");
+            }
+            this.response.validitySeconds = validitySeconds;
             return this.response;
         }
     }

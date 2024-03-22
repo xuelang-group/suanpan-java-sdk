@@ -4,8 +4,8 @@ import com.alibaba.fastjson2.JSON;
 import com.xuelang.suanpan.common.exception.IllegalRequestException;
 import com.xuelang.suanpan.common.exception.InvocationHandlerException;
 import com.xuelang.suanpan.common.exception.NoSuchHandlerException;
-import com.xuelang.suanpan.entities.io.InPort;
-import com.xuelang.suanpan.entities.io.OutPort;
+import com.xuelang.suanpan.common.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -42,7 +42,7 @@ public class HandlerProxy {
         HandlerResponse response = null;
         try {
             response = (HandlerResponse) handlerMethodEntry.getMethod().invoke(handlerMethodEntry.getInstance(), request);
-            merge(response.getNonSpecifiedOutPortDataList(), handlerMethodEntry.getOutPorts(), response.getOutPortDataMap());
+            response.merge(handlerMethodEntry.getSpecifiedDefaultOutPorts());
         } catch (IllegalAccessException e) {
             throw new InvocationHandlerException("invoke suanpan handler error", e);
         } catch (InvocationTargetException e) {
@@ -51,28 +51,5 @@ public class HandlerProxy {
 
         log.info("invoked handler response:{}", JSON.toJSONString(response));
         return response;
-    }
-
-    private void merge(List<Object> src , List<OutPort> srcDefaultOutPorts, Map<OutPort, Object> target) {
-        if (!CollectionUtils.isEmpty(src)) {
-            if (target == null || target.isEmpty()) {
-                for (Object outPortItem : srcDefaultOutPorts) {
-                    target.put((OutPort) outPortItem, src);
-                }
-            } else {
-                for (Object outPortItem : srcDefaultOutPorts) {
-                    List<Object> result = new ArrayList<>();
-                    Object origin = target.get((OutPort) outPortItem);
-                    if (origin != null){
-                        result.add(origin);
-                    }
-
-                    src.stream().forEach(item->{
-                        result.add(item);
-                    });
-                    target.put((OutPort) outPortItem, result);
-                }
-            }
-        }
     }
 }

@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.entities.connection;
+package com.xuelang.suanpan.common.entities.connection;
 
 public class Connection {
     private String srcNodeId;

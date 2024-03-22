@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.entities.io;
+package com.xuelang.suanpan.common.entities.io;
 
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.common.exception.NoSuchInPortException;

@@ -1,4 +1,4 @@
-package com.xuelang.suanpan.entities.enums;
+package com.xuelang.suanpan.common.entities.enums;
 
 import org.apache.commons.lang3.StringUtils;
 

@@ -3,6 +3,7 @@ package com.xuelang.suanpan.stream;
 import com.xuelang.suanpan.stream.handler.HandlerRequest;
 import com.xuelang.suanpan.stream.message.StreamContext;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.TimeUnit;
 
 public interface IStream {
@@ -11,7 +12,7 @@ public interface IStream {
      * @param streamContext 消息上下文
      * @return
      */
-    String publish(StreamContext streamContext);
+    String publish(StreamContext streamContext, @Nullable Long validitySeconds);
 
     /**
      * 主动轮询流消息

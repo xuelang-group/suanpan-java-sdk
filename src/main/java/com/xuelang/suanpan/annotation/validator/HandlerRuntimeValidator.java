@@ -3,7 +3,7 @@ package com.xuelang.suanpan.annotation.validator;
 import com.xuelang.suanpan.annotation.AsyncHandlerMapping;
 import com.xuelang.suanpan.annotation.SyncHandlerMapping;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.entities.enums.NodeReceiveMsgType;
+import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -12,7 +12,15 @@ import java.util.stream.Collectors;
 
 public class HandlerRuntimeValidator {
 
-    public static void validateHandlerPortValues(Class<?> clazz, int inPortMaxIndex, int outPortMaxIndex) throws RuntimeException {
+    public static void validateHandlerPortValues(Class<?> clazz) throws RuntimeException {
+        int inPortMaxIndex = ConstantConfiguration.getMaxInPortIndex();
+        int outPortMaxIndex = ConstantConfiguration.getMaxOutPortIndex();
+
+        if (inPortMaxIndex <= 0) {
+            throw new RuntimeException("the node has no inport, can not define a suanpan handler use " + AsyncHandlerMapping.class.getSimpleName() + " handler, Clazz: "
+                    + clazz.getName());
+        }
+
         Method[] methods = clazz.getDeclaredMethods();
         List<Method> filteredMethods = Arrays.stream(methods).filter(method -> (method.isAnnotationPresent(AsyncHandlerMapping.class)
                 || method.isAnnotationPresent(SyncHandlerMapping.class))).collect(Collectors.toList());
@@ -30,10 +38,7 @@ public class HandlerRuntimeValidator {
                             + clazz.getName() + ", Method: " + method.getName());
                 }
 
-                if (Arrays.stream(asyncHandlerMapping.default_outport_index()).anyMatch(index -> (index > outPortMaxIndex || index < 0))) {
-                    throw new RuntimeException(AsyncHandlerMapping.class.getSimpleName() + " illegal scope outport value set, cannot be negative value or bigger than outport index max value: " + outPortMaxIndex + ", Clazz: "
-                            + clazz.getName() + ", Method: " + method.getName());
-                }
+                checkOutPortValues(asyncHandlerMapping.default_outport_index(), outPortMaxIndex, clazz, method);
             }
 
             if (method.isAnnotationPresent(SyncHandlerMapping.class)) {
@@ -48,11 +53,20 @@ public class HandlerRuntimeValidator {
                             + clazz.getName() + ", Method: " + method.getName());
                 }
 
-                if (Arrays.stream(syncHandlerMapping.default_outport_index()).anyMatch(index -> (index > outPortMaxIndex || index <= 0))) {
-                    throw new RuntimeException(SyncHandlerMapping.class.getSimpleName() + " illegal scope outport value set, cannot be negative value or bigger than outport index max value: " + outPortMaxIndex + ", Clazz: "
-                            + clazz.getName() + ", Method: " + method.getName());
-                }
+                checkOutPortValues(syncHandlerMapping.default_outport_index(), outPortMaxIndex, clazz, method);
             }
         });
+    }
+
+    private static void checkOutPortValues(int[] defaultOutPortIndex, int outPortMaxIndex, Class<?> clazz, Method method) {
+        if (outPortMaxIndex <= 0 && (defaultOutPortIndex != null && defaultOutPortIndex.length > 0)) {
+            throw new RuntimeException("node has no outPort, cannot set " + AsyncHandlerMapping.class.getSimpleName() + " outport value , Clazz: "
+                    + clazz.getName() + ", Method: " + method.getName());
+        }
+
+        if ((defaultOutPortIndex != null && defaultOutPortIndex.length > 0) && Arrays.stream(defaultOutPortIndex).anyMatch(index -> (index > outPortMaxIndex || index < 0))) {
+            throw new RuntimeException(AsyncHandlerMapping.class.getSimpleName() + " illegal scope outport value set, cannot be negative value or bigger than outport index max value: " + outPortMaxIndex + ", Clazz: "
+                    + clazz.getName() + ", Method: " + method.getName());
+        }
     }
 }

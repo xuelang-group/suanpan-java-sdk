@@ -5,8 +5,8 @@ import com.xuelang.suanpan.annotation.SuanpanHandler;
 import com.xuelang.suanpan.annotation.SyncHandlerMapping;
 import com.xuelang.suanpan.annotation.validator.HandlerRuntimeValidator;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.entities.io.InPort;
-import com.xuelang.suanpan.entities.io.OutPort;
+import com.xuelang.suanpan.common.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -37,7 +37,7 @@ public class HandlerScanner {
         classes.stream().parallel().forEach(clazz -> {
             Annotation annotation = clazz.getAnnotation(SuanpanHandler.class);
             if (annotation != null) {
-                HandlerRuntimeValidator.validateHandlerPortValues(clazz, ConstantConfiguration.getMaxInPortIndex(), ConstantConfiguration.getMaxOutPortIndex());
+                HandlerRuntimeValidator.validateHandlerPortValues(clazz);
                 try {
                     Object instance = clazz.getDeclaredConstructor().newInstance();
 
@@ -56,7 +56,7 @@ public class HandlerScanner {
                             for (int index : asyncHandlerMapping.default_outport_index()) {
                                 outPorts.add(ConstantConfiguration.getOutPortByIndex(index));
                             }
-                            handlerMethodEntry.setOutPorts(outPorts);
+                            handlerMethodEntry.setSpecifiedDefaultOutPorts(outPorts);
                             instances.put(ConstantConfiguration.getInPortByIndex(asyncHandlerMapping.inport_index()), handlerMethodEntry);
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                         } else {
@@ -66,8 +66,8 @@ public class HandlerScanner {
                             for (int index : syncHandlerMapping.default_outport_index()) {
                                 outPorts.add(ConstantConfiguration.getOutPortByIndex(index));
                             }
-                            handlerMethodEntry.setOutPorts(outPorts);
-                            for (int index : syncHandlerMapping.inport_index()) {
+                            handlerMethodEntry.setSpecifiedDefaultOutPorts(outPorts);
+                            for (int index = 1; index <= ConstantConfiguration.getMaxInPortIndex(); index++) {
                                 instances.put(ConstantConfiguration.getInPortByIndex(index), handlerMethodEntry);
                             }
 

@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * 消息扩展信息
+ */
 public class Extra {
     //消息经过的节点链
     private List<MsgChainNode> msgChain = new ArrayList<>();

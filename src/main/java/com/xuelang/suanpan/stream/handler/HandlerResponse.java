@@ -1,7 +1,8 @@
 package com.xuelang.suanpan.stream.handler;
 
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.common.entities.io.OutPort;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.stream.message.Context;
 import org.apache.commons.collections4.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -10,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class HandlerResponse {
+public class HandlerResponse extends Context {
     private Long validitySeconds;
     private Map<OutPort, Object> outPortDataMap = new HashMap<>();
     private List<Object> nonSpecifiedOutPortDataList = new ArrayList<>();

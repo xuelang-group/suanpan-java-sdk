@@ -2,18 +2,23 @@ package com.xuelang.suanpan.stream;
 
 import com.xuelang.suanpan.common.entities.BaseSpDomainEntity;
 import com.xuelang.suanpan.common.entities.ProxrConnectionParam;
+import com.xuelang.suanpan.common.entities.io.OutPort;
 import com.xuelang.suanpan.configuration.ConfigurationKeys;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.stream.client.AbstractMqClient;
 import com.xuelang.suanpan.stream.client.RedisMqClient;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
 import com.xuelang.suanpan.stream.handler.HandlerRequest;
+import com.xuelang.suanpan.stream.handler.PollingResponse;
+import com.xuelang.suanpan.stream.message.Context;
 import com.xuelang.suanpan.stream.message.Extra;
-import com.xuelang.suanpan.stream.message.StreamContext;
+import com.xuelang.suanpan.stream.message.OutBoundMessage;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class Stream extends BaseSpDomainEntity implements IStream {
@@ -34,27 +39,35 @@ public class Stream extends BaseSpDomainEntity implements IStream {
     }
 
     @Override
-    public String publish(StreamContext streamContext, @Nullable Long validitySeconds) throws NullPointerException {
-        Objects.requireNonNull(streamContext, "stream context param can not be null");
-        if (validitySeconds!=null && validitySeconds<=0){
+    public String publish(Map<OutPort, Object> data, @Nullable String requestId, @Nullable Long validitySeconds, @Nullable Extra extra) throws NullPointerException {
+        Objects.requireNonNull(data, "stream context param can not be null");
+        if (data.isEmpty()) {
+            throw new IllegalArgumentException("data can not be empty");
+        }
+
+        if (validitySeconds != null && validitySeconds <= 0) {
             throw new IllegalArgumentException("validitySeconds can not be negative number!");
         }
 
-        Extra extra = streamContext.getExtra();
         if (extra == null) {
             extra = new Extra();
-            streamContext.setExtra(extra);
+            extra.append(ConstantConfiguration.getNodeId());
         }
 
-        extra.append(ConstantConfiguration.getNodeId());
         if (validitySeconds != null) {
             extra.setExpireTime(System.currentTimeMillis() + validitySeconds * 1000);
         }
-        return mqClient.publish(streamContext);
+
+        OutBoundMessage outBoundMessage = new OutBoundMessage();
+        outBoundMessage.setSuccess(true);
+        outBoundMessage.setOutPortDataMap(data);
+        outBoundMessage.setRequestId(requestId == null ? UUID.randomUUID().toString() : requestId);
+        outBoundMessage.setExtra(extra);
+        return mqClient.publish(outBoundMessage);
     }
 
     @Override
-    public HandlerRequest polling(long timeout, TimeUnit unit) {
+    public PollingResponse polling(long timeout, TimeUnit unit) {
         return mqClient.polling(timeout, unit);
     }
 

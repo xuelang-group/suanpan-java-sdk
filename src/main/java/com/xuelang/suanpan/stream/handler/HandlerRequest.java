@@ -1,15 +1,13 @@
 package com.xuelang.suanpan.stream.handler;
 
 import com.xuelang.suanpan.stream.message.Extra;
-import com.xuelang.suanpan.stream.message.InPortData;
+import com.xuelang.suanpan.stream.message.Context;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.util.List;
 
-public class HandlerRequest {
+public class HandlerRequest extends Context {
     private List<InPortData> msg;
-
-    private Extra extra;
 
     public List<InPortData> getMsg() {
         return msg;

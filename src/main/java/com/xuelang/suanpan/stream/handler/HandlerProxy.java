@@ -49,6 +49,12 @@ public class HandlerProxy {
             throw new InvocationHandlerException("invoke suanpan handler error", e);
         }
 
+        if (response.getValiditySeconds() != null) {
+            response.getExtra().setExpireTime(System.currentTimeMillis() + response.getValiditySeconds() * 1000);
+        } else {
+            response.getExtra().setExpireTime(Long.MAX_VALUE);
+        }
+
         log.info("invoked handler response:{}", JSON.toJSONString(response));
         return response;
     }

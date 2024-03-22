@@ -9,9 +9,10 @@ import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
 import com.xuelang.suanpan.stream.handler.HandlerRequest;
 import com.xuelang.suanpan.stream.handler.HandlerResponse;
-import com.xuelang.suanpan.stream.message.Message;
-import com.xuelang.suanpan.stream.message.MqResponse;
-import com.xuelang.suanpan.stream.message.StreamContext;
+import com.xuelang.suanpan.stream.handler.PollingResponse;
+import com.xuelang.suanpan.stream.message.InBoundMessage;
+import com.xuelang.suanpan.stream.message.MetaMessage;
+import com.xuelang.suanpan.stream.message.OutBoundMessage;
 import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
@@ -67,7 +68,7 @@ public class RedisMqClient extends AbstractMqClient {
      */
     private long restartDelay = 1000L;
     private volatile boolean isPolling;
-    private volatile HandlerRequest pollingResponse;
+    private volatile PollingResponse pollingResponse;
     private final RedisClient client;
     private final StatefulRedisConnection<String, String> consumeConnection;
     private final StatefulRedisConnection<String, String> sendConnection;
@@ -144,7 +145,7 @@ public class RedisMqClient extends AbstractMqClient {
     }
 
     @Override
-    public HandlerRequest polling(long timeout, TimeUnit unit) {
+    public PollingResponse polling(long timeout, TimeUnit unit) {
         lock.lock();
         pollingResponse = null;
         isPolling = true;
@@ -177,12 +178,12 @@ public class RedisMqClient extends AbstractMqClient {
     }
 
     @Override
-    public String publish(StreamContext streamContext) {
-        streamContext.getExtra().updateMsgNodeOutTime();
-        XAddArgs addArgs = XAddArgs.Builder.maxlen(streamContext.getMaxLength())
-                .approximateTrimming(streamContext.isApproximateTrimming());
-        if (streamContext.isP2p()) {
-            Map<String, Object[]> p2pDataMap = streamContext.toP2PQueueData();
+    public String publish(OutBoundMessage outBoundMessage) {
+        outBoundMessage.getExtra().updateMsgNodeOutTime();
+        XAddArgs addArgs = XAddArgs.Builder.maxlen(outBoundMessage.getMaxLength())
+                .approximateTrimming(outBoundMessage.isApproximateTrimming());
+        if (outBoundMessage.isP2p()) {
+            Map<String, Object[]> p2pDataMap = outBoundMessage.toP2PQueueData();
             if (p2pDataMap == null || p2pDataMap.isEmpty()) {
                 return null;
             }
@@ -201,8 +202,8 @@ public class RedisMqClient extends AbstractMqClient {
 
             return publishResults.toString();
         } else {
-            Object[] outData = streamContext.toMasterQueueData();
-            RedisFuture<String> future = this.sendConnection.async().xadd(streamContext.getSendQueue(), addArgs, outData);
+            Object[] outData = outBoundMessage.toMasterQueueData();
+            RedisFuture<String> future = this.sendConnection.async().xadd(outBoundMessage.getSendMasterQueue(), addArgs, outData);
             try {
                 return future.get();
             } catch (InterruptedException | ExecutionException e) {
@@ -238,11 +239,11 @@ public class RedisMqClient extends AbstractMqClient {
             log.info("suanpan sdk start consume queue msg ...");
             while (true) {
                 RedisFuture<List<Object>> future = consumeConnection.async().dispatch(CommandType.XREADGROUP, new NestedMultiOutput<>(StringCodec.UTF8), args);
-                MqResponse mqResponse = null;
+                MetaMessage metaMessage = null;
                 try {
                     //block get
                     List<Object> consumedObjects = future.get();
-                    mqResponse = MqResponse.convert((List) consumedObjects.get(0));
+                    metaMessage = MetaMessage.convert((List) consumedObjects.get(0));
                 } catch (InterruptedException | ExecutionException e) {
                     // TODO: 2024/3/13   发送消费异常事件
                     log.error("consume message from MQ error", e);
@@ -250,47 +251,46 @@ public class RedisMqClient extends AbstractMqClient {
                     continue;
                 }
 
-                List<Message> messages = mqResponse.getMessages();
-                if (CollectionUtils.isEmpty(messages)) {
+                List<InBoundMessage> inBoundMessages = metaMessage.getMessages();
+                if (CollectionUtils.isEmpty(inBoundMessages)) {
                     continue;
                 }
 
-                log.info("receive queue data:{}", JSON.toJSONString(messages));
-                messages.stream().forEach(message -> {
+                log.info("receive queue data:{}", JSON.toJSONString(inBoundMessages));
+                inBoundMessages.stream().forEach(inBoundMessage -> {
                     ThreadPool.pool().submit(() -> {
                         try {
-                            if (message.isExpired()) {
-                                log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(message));
+                            if (inBoundMessage.isExpired()) {
+                                log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(inBoundMessage));
                                 return;
                             }
 
-                            HandlerRequest request = message.covert();
+                            if (inBoundMessage.getInPortDataMap() == null || inBoundMessage.getInPortDataMap().isEmpty()){
+                                log.info("message has no inPort data, no need to process, msg: {}", JSON.toJSONString(inBoundMessage));
+                                return;
+                            }
+
+
                             if (isPolling) {
-                                if (request != null) {
-                                    pollingResponse = request;
-                                    lock.lock();
-                                    consumedData.signal();
-                                }
+                                pollingResponse = inBoundMessage.covertPollingResponse();
+                                lock.lock();
+                                consumedData.signal();
                             } else {
+                                HandlerRequest request = inBoundMessage.covert();
                                 HandlerResponse handlerResponse = proxy.invoke(request);
                                 if (handlerResponse != null && !handlerResponse.getOutPortDataMap().isEmpty()) {
-                                    StreamContext streamContext = new StreamContext();
-                                    if (handlerResponse.getValiditySeconds() != null) {
-                                        message.getExtra().setExpireTime(System.currentTimeMillis() + handlerResponse.getValiditySeconds() * 1000);
-                                    } else {
-                                        message.getExtra().setExpireTime(Long.MAX_VALUE);
-                                    }
-                                    streamContext.setExtra(message.getExtra());
-                                    streamContext.setRequestId(message.getRequestId());
-                                    streamContext.setSuccess(message.getSuccess());
-                                    streamContext.setOutPortDataMap(handlerResponse.getOutPortDataMap());
-                                    publish(streamContext);
+                                    OutBoundMessage outBoundMessage = new OutBoundMessage();
+                                    outBoundMessage.setExtra(handlerResponse.getExtra());
+                                    outBoundMessage.setRequestId(handlerResponse.getRequestId());
+                                    outBoundMessage.setSuccess(handlerResponse.isSuccess());
+                                    outBoundMessage.setOutPortDataMap(handlerResponse.getOutPortDataMap());
+                                    publish(outBoundMessage);
                                 }
                             }
 
-                            ack(queue, group, message.getMessageId());
+                            ack(queue, group, inBoundMessage.getMessageId());
                         } catch (NoSuchHandlerException | IllegalRequestException e) {
-                            ack(queue, group, message.getMessageId());
+                            ack(queue, group, inBoundMessage.getMessageId());
                             log.error("invoke suanpan handler error", e);
                         } catch (InvocationHandlerException e) {
                             // TODO: 2024/3/18  发送事件到算盘平台

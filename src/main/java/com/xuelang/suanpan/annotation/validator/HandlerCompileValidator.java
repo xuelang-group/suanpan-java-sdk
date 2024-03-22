@@ -81,11 +81,6 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                         "Method: " + method + " @AsyncHandlerMapping outport_index values cannot be duplication", element);
                             }
 
-                            if (asyncHandlerMapping.default_outport_index().length == 0 ) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @AsyncHandlerMapping outport_index values cannot be null", element);
-                            }
-
                             List<Integer> existIndexes = inPortIndexMapHandler.get(handler);
                             if (CollectionUtils.isEmpty(existIndexes)) {
                                 existIndexes = new ArrayList<>(asyncHandlerMapping.inport_index());
@@ -98,7 +93,7 @@ public class HandlerCompileValidator extends AbstractProcessor {
                         }
 
                         if (syncHandlerMapping != null) {
-                            if (syncHandler != null){
+                            if (syncHandler != null) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                                         "Method: " + method + " @SyncHandlerMapping function cannot be duplication", element);
                             }
@@ -113,14 +108,9 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                         "Method: " + method + " @SyncHandlerMapping inport_index values cannot be duplication", element);
                             }
 
-                            if (syncHandlerMapping.inport_index().length == 0 ) {
+                            if (syncHandlerMapping.inport_index().length == 0) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                                         "Method: " + method + " @SyncHandlerMapping inport_index values cannot be null", element);
-                            }
-
-                            if (syncHandlerMapping.default_outport_index().length == 0 ) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @SyncHandlerMapping outport_index values cannot be null", element);
                             }
 
                             List<Integer> existIndexes = inPortIndexMapHandler.get(handler);
@@ -157,19 +147,19 @@ public class HandlerCompileValidator extends AbstractProcessor {
     }
 
     private static String getGlobalInPortDuplication(Map<TypeElement, List<Integer>> typesMap) {
-        if (typesMap == null || typesMap.isEmpty()){
+        if (typesMap == null || typesMap.isEmpty()) {
             return null;
         }
 
         StringBuilder builder = new StringBuilder();
         List<TypeElement> keys = typesMap.keySet().stream().collect(Collectors.toList());
-        for (int i = 0; i< keys.size();i++){
+        for (int i = 0; i < keys.size(); i++) {
             TypeElement type = keys.get(i);
             List<Integer> indexes = typesMap.get(type);
-            for (int n = i+1; n< keys.size();n++){
+            for (int n = i + 1; n < keys.size(); n++) {
                 TypeElement item = keys.get(n);
                 List<Integer> itemIndexes = typesMap.get(item);
-                if (CollectionUtils.containsAny(indexes,itemIndexes)){
+                if (CollectionUtils.containsAny(indexes, itemIndexes)) {
                     builder.append(type.asType().toString());
                     builder.append(" and ");
                     builder.append(item.asType().toString());
@@ -178,7 +168,7 @@ public class HandlerCompileValidator extends AbstractProcessor {
             }
         }
 
-        if (builder.length()>0){
+        if (builder.length() > 0) {
             return builder.toString();
         }
 
@@ -186,6 +176,10 @@ public class HandlerCompileValidator extends AbstractProcessor {
     }
 
     private static boolean hasDuplicates(int[] array) {
+        if (array == null || array.length == 0) {
+            return false;
+        }
+
         HashSet<Integer> set = new HashSet<>();
         for (int num : array) {
             if (!set.add(num)) {

@@ -1,13 +1,14 @@
 package com.xuelang.suanpan.stream;
 
-import com.xuelang.suanpan.entities.BaseSpDomainEntity;
-import com.xuelang.suanpan.entities.ProxrConnectionParam;
+import com.xuelang.suanpan.common.entities.BaseSpDomainEntity;
+import com.xuelang.suanpan.common.entities.ProxrConnectionParam;
 import com.xuelang.suanpan.configuration.ConfigurationKeys;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.stream.client.AbstractMqClient;
 import com.xuelang.suanpan.stream.client.RedisMqClient;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
 import com.xuelang.suanpan.stream.handler.HandlerRequest;
+import com.xuelang.suanpan.stream.message.Extra;
 import com.xuelang.suanpan.stream.message.StreamContext;
 import org.apache.commons.lang3.StringUtils;
 
@@ -33,8 +34,22 @@ public class Stream extends BaseSpDomainEntity implements IStream {
     }
 
     @Override
-    public String publish(StreamContext streamContext) throws NullPointerException {
+    public String publish(StreamContext streamContext, @Nullable Long validitySeconds) throws NullPointerException {
         Objects.requireNonNull(streamContext, "stream context param can not be null");
+        if (validitySeconds!=null && validitySeconds<=0){
+            throw new IllegalArgumentException("validitySeconds can not be negative number!");
+        }
+
+        Extra extra = streamContext.getExtra();
+        if (extra == null) {
+            extra = new Extra();
+            streamContext.setExtra(extra);
+        }
+
+        extra.append(ConstantConfiguration.getNodeId());
+        if (validitySeconds != null) {
+            extra.setExpireTime(System.currentTimeMillis() + validitySeconds * 1000);
+        }
         return mqClient.publish(streamContext);
     }
 

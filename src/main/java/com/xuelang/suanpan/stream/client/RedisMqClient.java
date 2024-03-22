@@ -1,16 +1,16 @@
 package com.xuelang.suanpan.stream.client;
 
 import com.alibaba.fastjson2.JSON;
-import com.xuelang.suanpan.common.pool.ThreadPool;
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.common.exception.IllegalRequestException;
 import com.xuelang.suanpan.common.exception.InvocationHandlerException;
 import com.xuelang.suanpan.common.exception.NoSuchHandlerException;
+import com.xuelang.suanpan.common.pool.ThreadPool;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
 import com.xuelang.suanpan.stream.handler.HandlerRequest;
 import com.xuelang.suanpan.stream.handler.HandlerResponse;
-import com.xuelang.suanpan.stream.message.MqResponse;
 import com.xuelang.suanpan.stream.message.Message;
+import com.xuelang.suanpan.stream.message.MqResponse;
 import com.xuelang.suanpan.stream.message.StreamContext;
 import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -25,7 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -109,7 +111,7 @@ public class RedisMqClient extends AbstractMqClient {
         this.proxy = proxy;
     }
 
-    public void initConsumerGroup(){
+    public void initConsumerGroup() {
         CommandArgs<String, String> args = new CommandArgs<>(StringCodec.UTF8)
                 .add(CommandKeyword.CREATE)
                 .add(queue)
@@ -176,14 +178,31 @@ public class RedisMqClient extends AbstractMqClient {
 
     @Override
     public String publish(StreamContext streamContext) {
+        streamContext.getExtra().updateMsgNodeOutTime();
         XAddArgs addArgs = XAddArgs.Builder.maxlen(streamContext.getMaxLength())
                 .approximateTrimming(streamContext.isApproximateTrimming());
         if (streamContext.isP2p()) {
-            // TODO: 2024/3/13 p2p发送
-            return null;
+            Map<String, Object[]> p2pDataMap = streamContext.toP2PQueueData();
+            if (p2pDataMap == null || p2pDataMap.isEmpty()) {
+                return null;
+            }
+
+            List<String> publishResults = new ArrayList<>();
+            p2pDataMap.entrySet().parallelStream().forEach(entry -> {
+                RedisFuture<String> future = this.sendConnection.async().xadd(entry.getKey(), addArgs, entry.getValue());
+                try {
+                    publishResults.add(future.get());
+                } catch (InterruptedException | ExecutionException e) {
+                    log.error("publish message to MQ error", e);
+                } finally {
+                    log.info("publish queue data:{}", JSON.toJSONString(entry.getValue()));
+                }
+            });
+
+            return publishResults.toString();
         } else {
             Object[] outData = streamContext.toMasterQueueData();
-            RedisFuture<String> future = this.sendConnection.async().xadd(streamContext.getMasterQueue(), addArgs, outData);
+            RedisFuture<String> future = this.sendConnection.async().xadd(streamContext.getSendQueue(), addArgs, outData);
             try {
                 return future.get();
             } catch (InterruptedException | ExecutionException e) {
@@ -240,6 +259,11 @@ public class RedisMqClient extends AbstractMqClient {
                 messages.stream().forEach(message -> {
                     ThreadPool.pool().submit(() -> {
                         try {
+                            if (message.isExpired()) {
+                                log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(message));
+                                return;
+                            }
+
                             HandlerRequest request = message.covert();
                             if (isPolling) {
                                 if (request != null) {
@@ -251,6 +275,11 @@ public class RedisMqClient extends AbstractMqClient {
                                 HandlerResponse handlerResponse = proxy.invoke(request);
                                 if (handlerResponse != null && !handlerResponse.getOutPortDataMap().isEmpty()) {
                                     StreamContext streamContext = new StreamContext();
+                                    if (handlerResponse.getValiditySeconds() != null) {
+                                        message.getExtra().setExpireTime(System.currentTimeMillis() + handlerResponse.getValiditySeconds() * 1000);
+                                    } else {
+                                        message.getExtra().setExpireTime(Long.MAX_VALUE);
+                                    }
                                     streamContext.setExtra(message.getExtra());
                                     streamContext.setRequestId(message.getRequestId());
                                     streamContext.setSuccess(message.getSuccess());

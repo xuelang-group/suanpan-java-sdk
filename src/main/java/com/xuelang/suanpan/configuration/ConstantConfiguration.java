@@ -5,10 +5,10 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.xuelang.suanpan.common.utils.HttpUtil;
 import com.xuelang.suanpan.common.exception.NoSuchInPortException;
-import com.xuelang.suanpan.entities.connection.Connection;
-import com.xuelang.suanpan.entities.io.InPort;
-import com.xuelang.suanpan.entities.enums.NodeReceiveMsgType;
-import com.xuelang.suanpan.entities.io.OutPort;
+import com.xuelang.suanpan.common.entities.connection.Connection;
+import com.xuelang.suanpan.common.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
+import com.xuelang.suanpan.common.entities.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -21,8 +21,8 @@ public class ConstantConfiguration {
     private static Map<String, InPort> inPortMap = new HashMap<>();
     private static Map<String, OutPort> outPortMap = new HashMap<>();
     private static Map<String, Object> spParamMap = new HashMap<>();
-    private static Integer Max_InPort_Index = null;
-    private static Integer Max_OutPort_Index = null;
+    private static Integer Max_InPort_Index = -1;
+    private static Integer Max_OutPort_Index = -1;
     private static NodeReceiveMsgType receiveMsgType;
 
     private static Map<OutPort, List<Connection>> outPortConnectionMap = new HashMap<>();
@@ -159,6 +159,14 @@ public class ConstantConfiguration {
                 }
             }
         }
+    }
+
+    public static List<Connection> getConnections(OutPort outPort){
+        if (outPortConnectionMap.isEmpty()){
+            return null;
+        }
+
+        return outPortConnectionMap.get(outPort);
     }
 
     public static NodeReceiveMsgType getReceiveMsgType() {

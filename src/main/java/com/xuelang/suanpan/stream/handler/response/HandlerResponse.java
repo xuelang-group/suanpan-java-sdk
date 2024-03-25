@@ -1,8 +1,8 @@
-package com.xuelang.suanpan.stream.handler;
+package com.xuelang.suanpan.stream.handler.response;
 
 import com.xuelang.suanpan.common.entities.io.OutPort;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.stream.message.Context;
+import com.xuelang.suanpan.stream.message.Header;
 import org.apache.commons.collections4.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -11,14 +11,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class HandlerResponse extends Context {
+public class HandlerResponse {
+    private Header header;
     private Long validitySeconds;
     private Map<OutPort, Object> outPortDataMap = new HashMap<>();
     private List<Object> nonSpecifiedOutPortDataList = new ArrayList<>();
 
-    public static ResponseBuilder builder(){
+    public Header getHeader() {
+        return header;
+    }
+
+    public void setHeader(Header header) {
+        this.header = header;
+    }
+
+    public static ResponseBuilder builder() {
         return new ResponseBuilder();
     }
+
     public Map<OutPort, Object> getOutPortDataMap() {
         return outPortDataMap;
     }
@@ -31,7 +41,7 @@ public class HandlerResponse extends Context {
         return validitySeconds;
     }
 
-    public void merge(List<OutPort> specifiedDefaultOutPorts) {
+    public void mergeOutPortData(List<OutPort> specifiedDefaultOutPorts) {
         if (!CollectionUtils.isEmpty(nonSpecifiedOutPortDataList) && !CollectionUtils.isEmpty(specifiedDefaultOutPorts)) {
             if (outPortDataMap == null || outPortDataMap.isEmpty()) {
                 for (Object outPortItem : specifiedDefaultOutPorts) {
@@ -41,11 +51,11 @@ public class HandlerResponse extends Context {
                 for (Object outPortItem : specifiedDefaultOutPorts) {
                     List<Object> result = new ArrayList<>();
                     Object origin = outPortDataMap.get((OutPort) outPortItem);
-                    if (origin != null){
+                    if (origin != null) {
                         result.add(origin);
                     }
 
-                    nonSpecifiedOutPortDataList.stream().forEach(item->{
+                    nonSpecifiedOutPortDataList.stream().forEach(item -> {
                         result.add(item);
                     });
                     outPortDataMap.put((OutPort) outPortItem, result);
@@ -54,8 +64,9 @@ public class HandlerResponse extends Context {
         }
     }
 
-    public static class ResponseBuilder{
+    public static class ResponseBuilder {
         private HandlerResponse response = new HandlerResponse();
+
         public ResponseBuilder append(@Nullable Integer outPortIndex, Object data) throws RuntimeException {
             if (outPortIndex == null) {
                 response.getNonSpecifiedOutPortDataList().add(data);
@@ -74,11 +85,12 @@ public class HandlerResponse extends Context {
 
         /**
          * 构建response方法
+         *
          * @param validitySeconds 消息的有效期时间，单位秒；
          * @return
          */
-        public HandlerResponse build(@Nullable Long validitySeconds ){
-            if (validitySeconds!=null && validitySeconds<=0){
+        public HandlerResponse build(@Nullable Long validitySeconds) {
+            if (validitySeconds != null && validitySeconds <= 0) {
                 throw new IllegalArgumentException("validitySeconds can not be negative number!");
             }
             this.response.validitySeconds = validitySeconds;

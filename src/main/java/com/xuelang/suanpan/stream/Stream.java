@@ -8,10 +8,9 @@ import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.stream.client.AbstractMqClient;
 import com.xuelang.suanpan.stream.client.RedisMqClient;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
-import com.xuelang.suanpan.stream.handler.HandlerRequest;
-import com.xuelang.suanpan.stream.handler.PollingResponse;
-import com.xuelang.suanpan.stream.message.Context;
+import com.xuelang.suanpan.stream.handler.response.PollingResponse;
 import com.xuelang.suanpan.stream.message.Extra;
+import com.xuelang.suanpan.stream.message.Header;
 import com.xuelang.suanpan.stream.message.OutBoundMessage;
 import org.apache.commons.lang3.StringUtils;
 
@@ -49,20 +48,21 @@ public class Stream extends BaseSpDomainEntity implements IStream {
             throw new IllegalArgumentException("validitySeconds can not be negative number!");
         }
 
+        Header header = new Header();
+        header.setSuccess(true);
+        header.setRequestId(requestId == null ? UUID.randomUUID().toString() : requestId);
         if (extra == null) {
             extra = new Extra();
             extra.append(ConstantConfiguration.getNodeId());
         }
-
-        if (validitySeconds != null) {
-            extra.setExpireTime(System.currentTimeMillis() + validitySeconds * 1000);
+        header.setExtra(extra);
+        if (validitySeconds != null && validitySeconds > 0) {
+            header.refreshExpire(validitySeconds);
         }
 
         OutBoundMessage outBoundMessage = new OutBoundMessage();
-        outBoundMessage.setSuccess(true);
+        outBoundMessage.setHeader(header);
         outBoundMessage.setOutPortDataMap(data);
-        outBoundMessage.setRequestId(requestId == null ? UUID.randomUUID().toString() : requestId);
-        outBoundMessage.setExtra(extra);
         return mqClient.publish(outBoundMessage);
     }
 

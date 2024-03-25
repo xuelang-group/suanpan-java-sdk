@@ -1,7 +1,7 @@
 package com.xuelang.suanpan.stream.client;
 
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
-import com.xuelang.suanpan.stream.handler.PollingResponse;
+import com.xuelang.suanpan.stream.handler.response.PollingResponse;
 import com.xuelang.suanpan.stream.message.OutBoundMessage;
 
 import java.util.concurrent.TimeUnit;

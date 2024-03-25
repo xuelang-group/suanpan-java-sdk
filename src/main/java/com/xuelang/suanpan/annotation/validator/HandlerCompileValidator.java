@@ -4,8 +4,8 @@ import com.xuelang.suanpan.annotation.AsyncHandlerMapping;
 import com.xuelang.suanpan.annotation.SuanpanHandler;
 import com.xuelang.suanpan.annotation.SuanpanHandlerResponseBody;
 import com.xuelang.suanpan.annotation.SyncHandlerMapping;
-import com.xuelang.suanpan.stream.handler.HandlerRequest;
-import com.xuelang.suanpan.stream.handler.HandlerResponse;
+import com.xuelang.suanpan.stream.handler.response.HandlerResponse;
+import com.xuelang.suanpan.stream.handler.request.HandlerRequest;
 import org.apache.commons.collections4.CollectionUtils;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -72,13 +72,20 @@ public class HandlerCompileValidator extends AbstractProcessor {
                         } else if (!((VariableElement) params.get(0)).asType().toString().equals(HandlerRequest.class.getName())) {
                             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                                     "Method: " + method + " parameter must be set " + HandlerRequest.class.getName(), element);
+                        } else if (!((VariableElement) params.get(0)).asType().toString().equals(HandlerRequest.class.getName())) {
+                            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                    "Method: " + method + " parameter must be set " + HandlerRequest.class.getName(), element);
                         }
 
-
                         if (asyncHandlerMapping != null) {
-                            if (hasDuplicates(asyncHandlerMapping.default_outport_index())) {
+                            if (hasDuplicateOrNegative(asyncHandlerMapping.default_outport_index())) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @AsyncHandlerMapping outport_index values cannot be duplication", element);
+                                        "Method: " + method + " @AsyncHandlerMapping outport_index values cannot be duplication or negative", element);
+                            }
+
+                            if (asyncHandlerMapping.inport_index()<0){
+                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                        "Method: " + method + " @AsyncHandlerMapping inport_index value cannot be negative", element);
                             }
 
                             List<Integer> existIndexes = inPortIndexMapHandler.get(handler);
@@ -98,14 +105,14 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                         "Method: " + method + " @SyncHandlerMapping function cannot be duplication", element);
                             }
 
-                            if (hasDuplicates(syncHandlerMapping.default_outport_index())) {
+                            if (hasDuplicateOrNegative(syncHandlerMapping.default_outport_index())) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @SyncHandlerMapping outport_index values cannot be duplication", element);
+                                        "Method: " + method + " @SyncHandlerMapping outport_index values cannot be duplication or negative", element);
                             }
 
-                            if (hasDuplicates(syncHandlerMapping.inport_index())) {
+                            if (hasDuplicateOrNegative(syncHandlerMapping.inport_index())) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @SyncHandlerMapping inport_index values cannot be duplication", element);
+                                        "Method: " + method + " @SyncHandlerMapping inport_index values cannot be duplication or negative", element);
                             }
 
                             if (syncHandlerMapping.inport_index().length == 0) {
@@ -175,7 +182,7 @@ public class HandlerCompileValidator extends AbstractProcessor {
         return null;
     }
 
-    private static boolean hasDuplicates(int[] array) {
+    private static boolean hasDuplicateOrNegative(int[] array) {
         if (array == null || array.length == 0) {
             return false;
         }
@@ -183,6 +190,10 @@ public class HandlerCompileValidator extends AbstractProcessor {
         HashSet<Integer> set = new HashSet<>();
         for (int num : array) {
             if (!set.add(num)) {
+                return true;
+            }
+
+            if (num <= 0){
                 return true;
             }
         }

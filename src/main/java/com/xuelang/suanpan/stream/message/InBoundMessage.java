@@ -1,19 +1,27 @@
 package com.xuelang.suanpan.stream.message;
 
-import com.xuelang.suanpan.stream.handler.HandlerRequest;
 import com.xuelang.suanpan.common.entities.io.InPort;
-import com.xuelang.suanpan.stream.handler.PollingResponse;
-import com.xuelang.suanpan.stream.handler.InPortData;
+import com.xuelang.suanpan.stream.handler.*;
+import com.xuelang.suanpan.stream.handler.request.HandlerRequest;
+import com.xuelang.suanpan.stream.handler.response.PollingResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
-public class InBoundMessage extends Context {
+public class InBoundMessage {
+    private Header header;
     private Map<InPort, Object> inPortDataMap = new HashMap<>();
+
+    public Header getHeader() {
+        return header;
+    }
+
+    public void setHeader(Header header) {
+        this.header = header;
+    }
 
     public Map<InPort, Object> getInPortDataMap() {
         return inPortDataMap;
@@ -23,56 +31,44 @@ public class InBoundMessage extends Context {
         inPortDataMap.put(inPort, value);
     }
 
-    public HandlerRequest covert() {
-        HandlerRequest request = new HandlerRequest();
-        request.setRequestId(requestId);
-        request.setMessageId(messageId);
-        request.setSuccess(success);
+    public boolean isExpired() {
+        if (header == null ) {
+            return false;
+        }
 
-        List<InPortData> msg = new ArrayList<>();
-        this.inPortDataMap.keySet().stream().forEach(inPort -> {
+        return header.isExpired();
+    }
+
+    public boolean isEmpty() {
+        return inPortDataMap == null || inPortDataMap.isEmpty();
+    }
+
+    public HandlerRequest covert() {
+        if (inPortDataMap == null || inPortDataMap.isEmpty()) {
+            return null;
+        }
+
+        HandlerRequest request = new HandlerRequest();
+        request.setHeader(header);
+        request.setData(this.inPortDataMap.keySet().stream().map(inPort -> {
             InPortData tmp = new InPortData();
             tmp.setInPort(inPort);
             tmp.setData(this.inPortDataMap.get(inPort));
-            msg.add(tmp);
-        });
-        request.setMsg(msg);
-        if (extra != null) {
-            request.setExtra(extra);
-        }
-
-
+            return tmp;
+        }).collect(Collectors.toList()));
         return request;
     }
 
 
     public PollingResponse covertPollingResponse() {
         PollingResponse pollingResponse = new PollingResponse();
-        pollingResponse.setRequestId(requestId);
-        pollingResponse.setMessageId(messageId);
-        pollingResponse.setSuccess(success);
-
-        List<InPortData> msg = new ArrayList<>();
-        this.inPortDataMap.keySet().stream().forEach(inPort -> {
+        pollingResponse.setHeader(header);
+        pollingResponse.setData(this.inPortDataMap.keySet().stream().map(inPort -> {
             InPortData tmp = new InPortData();
             tmp.setInPort(inPort);
             tmp.setData(this.inPortDataMap.get(inPort));
-            msg.add(tmp);
-        });
-        pollingResponse.setMsg(msg);
-        if (extra != null) {
-            pollingResponse.setExtra(extra);
-        }
-
-
+            return tmp;
+        }).collect(Collectors.toList()));
         return pollingResponse;
-    }
-
-    public boolean isExpired() {
-        if (extra == null) {
-            return false;
-        }
-
-        return extra.isExpired();
     }
 }

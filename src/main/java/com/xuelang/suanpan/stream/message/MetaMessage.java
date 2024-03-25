@@ -1,6 +1,7 @@
 package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.common.entities.io.InPort;
 
@@ -14,6 +15,11 @@ import java.util.Map;
  * 从消息队列中消费消息的响应
  */
 public class MetaMessage {
+    private static final String RECV_TYPE_KEY = "ReceiveMsgType";
+    private static final String REQUEST_ID_KEY = "request_id";
+    private static final String REQUEST_ID_ALIAS_KEY = "id";
+    private static final String EXTRA_KEY = "extra";
+    private static final String SUCCESS_KEY = "success";
     /**
      * 消费的队列名称
      */
@@ -48,51 +54,47 @@ public class MetaMessage {
         }
 
         InBoundMessage inBoundMessage = new InBoundMessage();
-        inBoundMessage.setMessageId(messageId);
-        if (tmpContentMap.get(MessageConstants.REQUEST_ID_KEY) != null) {
-            inBoundMessage.setRequestId((String) tmpContentMap.get(MessageConstants.REQUEST_ID_KEY));
-            tmpContentMap.remove(MessageConstants.REQUEST_ID_KEY);
+
+        Header header = new Header();
+        header.setMessageId(messageId);
+        if (tmpContentMap.get(REQUEST_ID_KEY) != null) {
+            header.setRequestId((String) tmpContentMap.get(REQUEST_ID_KEY));
+            tmpContentMap.remove(REQUEST_ID_KEY);
         }
-        if (tmpContentMap.get(MessageConstants.REQUEST_ID_ALIAS_KEY) != null) {
-            inBoundMessage.setRequestId((String) tmpContentMap.get(MessageConstants.REQUEST_ID_ALIAS_KEY));
-            tmpContentMap.remove(MessageConstants.REQUEST_ID_ALIAS_KEY);
+        if (tmpContentMap.get(REQUEST_ID_ALIAS_KEY) != null) {
+            header.setRequestId((String) tmpContentMap.get(REQUEST_ID_ALIAS_KEY));
+            tmpContentMap.remove(REQUEST_ID_ALIAS_KEY);
         }
-        if (tmpContentMap.get(MessageConstants.EXTRA_KEY) != null) {
-            Extra extra = JSONObject.parseObject((String) tmpContentMap.get(MessageConstants.EXTRA_KEY), Extra.class);
+        if (tmpContentMap.get(RECV_TYPE_KEY) != null) {
+            header.setReceiveMsgType(
+                    NodeReceiveMsgType.getByCode((String) tmpContentMap.get(RECV_TYPE_KEY)));
+            tmpContentMap.remove(RECV_TYPE_KEY);
+        } else {
+            header.setReceiveMsgType(NodeReceiveMsgType.async);
+        }
+        if (tmpContentMap.get(EXTRA_KEY) != null) {
+            Extra extra = JSONObject.parseObject((String) tmpContentMap.get(EXTRA_KEY), Extra.class);
             if (extra == null) {
                 extra = new Extra();
             }
             extra.append(ConstantConfiguration.getNodeId());
-            inBoundMessage.setExtra(extra);
-            tmpContentMap.remove(MessageConstants.EXTRA_KEY);
+            header.setExtra(extra);
+            tmpContentMap.remove(EXTRA_KEY);
         } else {
             Extra extra = new Extra();
             extra.append(ConstantConfiguration.getNodeId());
-            inBoundMessage.setExtra(extra);
+            header.setExtra(extra);
+        }
+        if (tmpContentMap.get(SUCCESS_KEY) != null) {
+            header.setSuccess(Boolean.valueOf((String) tmpContentMap.get(SUCCESS_KEY)));
+            tmpContentMap.remove(SUCCESS_KEY);
         }
 
-        if (tmpContentMap.get(MessageConstants.SUCCESS_KEY) != null) {
-            inBoundMessage.setSuccess(Boolean.valueOf((String) tmpContentMap.get(MessageConstants.SUCCESS_KEY)));
-            tmpContentMap.remove(MessageConstants.SUCCESS_KEY);
-        }
+        inBoundMessage.setHeader(header);
 
         tmpContentMap.keySet().stream().forEach(key -> {
             InPort inPort;
             if ((inPort = ConstantConfiguration.getInPortByUuid(key)) != null) {
-                // TODO: 2024/3/12 理论上接收的数据不应该带有数据类型，应该在发送时就根据输出端口转成对应的类型，在编排时就可以把下游组件的
-                // TODO: 2024/3/12 的输入端口类型和上游组件匹配，接收到的数据类型应该在发送时对类型做保证
-                /*if (tmpContentMap.get(key+MessageSchemaConstants.OUT_TYPE_KEY) != null){
-
-                }
-
-                if (tmpContentMap.get(key+MessageSchemaConstants.OUT_SUB_TYPE_KEY) != null){
-
-                }
-
-                if (tmpContentMap.get(key+MessageSchemaConstants.OUT_PORT_NODE_ID_KEY) != null){
-
-                }*/
-
                 inBoundMessage.append(inPort, tmpContentMap.get(key));
             }
         });

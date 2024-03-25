@@ -20,6 +20,10 @@ public class Extra {
     //兼容老版本的已有的配置
     private JSONObject global;
 
+    public Extra(){
+        global = new JSONObject();
+    }
+
     public List<MsgChainNode> getMsgChain() {
         return msgChain;
     }

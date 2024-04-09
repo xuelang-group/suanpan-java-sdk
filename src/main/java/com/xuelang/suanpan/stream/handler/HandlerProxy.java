@@ -21,7 +21,7 @@ public class HandlerProxy {
 
 
     public MetaOutflowMessage invoke(MetaInflowMessage metaInflowMessage) throws StreamGlobalException{
-        log.debug("inbound message: {}", JSON.toJSONString(metaInflowMessage));
+        log.debug("meta inflow message: {}", JSON.toJSONString(metaInflowMessage));
         if (metaInflowMessage == null) {
             throw new StreamGlobalException(GlobalExceptionType.IllegalStreamMessage);
         }
@@ -55,7 +55,7 @@ public class HandlerProxy {
         metaOutflowMessage.setOutPortDataMap(outflowMessage.getOutPortDataMap());
         metaOutflowMessage.refreshExt(outflowMessage.getExt());
         metaOutflowMessage.refreshExpire(outflowMessage.getValiditySeconds() * 1000);
-        log.debug("outbound message:{}", JSON.toJSONString(metaOutflowMessage));
+        log.debug("meta outflow message:{}", JSON.toJSONString(metaOutflowMessage));
         return metaOutflowMessage;
     }
 }

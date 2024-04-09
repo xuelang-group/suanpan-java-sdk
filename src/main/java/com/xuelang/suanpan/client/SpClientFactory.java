@@ -8,6 +8,7 @@ import com.xuelang.suanpan.service.Service;
 import com.xuelang.suanpan.state.State;
 import com.xuelang.suanpan.stream.IStream;
 import com.xuelang.suanpan.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -16,7 +17,8 @@ import java.lang.reflect.InvocationTargetException;
  * 提供静态build方法，用于构建spClient实例；
  * 对于用户组件开发者，需要通过该类提供的build方法创建spClient实例，用于和平台交互及流计算
  */
-public class SpClientBuilder {
+@Slf4j
+public class SpClientFactory {
 
     private static volatile SpClient spClient;
 
@@ -25,9 +27,9 @@ public class SpClientBuilder {
      *
      * @return spClient单例对象
      */
-    public static SpClient build() {
+    public static SpClient create() {
         if (null == spClient) {
-            synchronized (SpClientBuilder.class) {
+            synchronized (SpClientFactory.class) {
                 if (null == spClient) {
                     spClient = new SpClient();
                 }
@@ -44,9 +46,9 @@ public class SpClientBuilder {
      * @param proxrConnectionParam 算盘后面板，需要调试的组件的连接信息
      * @return spClient单例对象
      */
-    public static SpClient buildDebugClient(ProxrConnectionParam proxrConnectionParam) {
+    public static SpClient createDebugClient(ProxrConnectionParam proxrConnectionParam) {
         if (null == spClient) {
-            synchronized (SpClientBuilder.class) {
+            synchronized (SpClientFactory.class) {
                 if (null == spClient) {
                     spClient = new SpClient(proxrConnectionParam);
                 }
@@ -154,6 +156,7 @@ public class SpClientBuilder {
 
             } catch (NoSuchMethodException | InvocationTargetException | InstantiationException |
                      IllegalAccessException e) {
+                log.error("create instance error", e);
                 throw new RuntimeException(e);
             }
         }

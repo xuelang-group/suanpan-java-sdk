@@ -7,7 +7,6 @@ import java.util.List;
 public class HandlerMethodEntry<T> {
     private T instance;
     private Method method;
-    private boolean sync;
     private List<OutPort> specifiedDefaultOutPorts;
 
     public T getInstance() {
@@ -24,14 +23,6 @@ public class HandlerMethodEntry<T> {
 
     public void setMethod(Method method) {
         this.method = method;
-    }
-
-    public boolean isSync() {
-        return sync;
-    }
-
-    public void setSync(boolean sync) {
-        this.sync = sync;
     }
 
     public List<OutPort> getSpecifiedDefaultOutPorts() {

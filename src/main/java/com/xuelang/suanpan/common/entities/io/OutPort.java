@@ -1,28 +1,33 @@
 package com.xuelang.suanpan.common.entities.io;
 
+import com.xuelang.suanpan.common.exception.GlobalExceptionType;
+import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.common.exception.NoSuchInPortException;
-
-import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
 
 public class OutPort extends BasePort{
     private OutPort(){}
 
-    public static OutPort build (Integer outPortIndex) throws NoSuchInPortException {
-        Objects.requireNonNull(outPortIndex, "outPort index can not be null");
-        OutPort outPort = ConstantConfiguration.getOutPortByIndex(outPortIndex);
+    public static OutPort bind(Integer outPortNumber) throws StreamGlobalException {
+        if (outPortNumber == null){
+            return null;
+        }
+
+        OutPort outPort = ConstantConfiguration.getByOutPortNumber(outPortNumber);
         if (outPort == null){
-            throw new NoSuchInPortException("specified outPort index may illegal");
+            throw new StreamGlobalException(GlobalExceptionType.NoSuchOutPortException);
         }
 
         return outPort;
     }
 
-    public static OutPort build (String outPortUUID) throws NoSuchInPortException {
-        Objects.requireNonNull(outPortUUID, "outPort index can not be null");
-        OutPort outPort = ConstantConfiguration.getOutPortByUUID(outPortUUID);
+    public static OutPort bind(String outPortUUID) throws StreamGlobalException {
+        if (StringUtils.isBlank(outPortUUID)){
+            return null;
+        }
+        OutPort outPort = ConstantConfiguration.getByOutPortUUID(outPortUUID);
         if (outPort == null){
-            throw new NoSuchInPortException("specified outPort index may illegal");
+            throw new StreamGlobalException(GlobalExceptionType.NoSuchOutPortException);
         }
 
         return outPort;

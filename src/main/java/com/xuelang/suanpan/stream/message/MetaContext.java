@@ -1,18 +1,16 @@
 package com.xuelang.suanpan.stream.message;
 
-import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
+import com.alibaba.fastjson2.JSONObject;
 
 /**
  * 消息上下文
  */
-public class Header {
+public class MetaContext {
     private String messageId;
     private String requestId;
-    private Boolean success = true;
     private Extra extra;
-    private NodeReceiveMsgType receiveMsgType;
 
-    public Header(){
+    public MetaContext(){
         extra = new Extra();
     }
 
@@ -39,14 +37,6 @@ public class Header {
         this.requestId = requestId;
     }
 
-    public Boolean getSuccess() {
-        return success;
-    }
-
-    public void setSuccess(Boolean success) {
-        this.success = success;
-    }
-
     public Extra getExtra() {
         return extra;
     }
@@ -55,16 +45,16 @@ public class Header {
         this.extra = extra;
     }
 
-    public NodeReceiveMsgType getReceiveMsgType() {
-        return receiveMsgType;
+    public void refreshExpire(Long validityMillis) {
+        if (validityMillis != null && validityMillis > 0) {
+            extra.setExpireTime(System.currentTimeMillis() + validityMillis);
+        } else{
+            extra.setExpireTime(Long.MAX_VALUE);
+        }
     }
 
-    public void setReceiveMsgType(NodeReceiveMsgType receiveMsgType) {
-        this.receiveMsgType = receiveMsgType;
-    }
-
-    public void refreshExpire(long validityMillis) {
-        extra.setExpireTime(System.currentTimeMillis() + validityMillis);
+    public void refreshExt(JSONObject ext){
+        extra.setGlobal(ext);
     }
 
     public void updateMsgOutTime() {

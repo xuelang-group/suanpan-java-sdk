@@ -1,7 +1,6 @@
 package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSONObject;
-import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.common.entities.io.InPort;
 
@@ -14,12 +13,11 @@ import java.util.Map;
 /**
  * 从消息队列中消费消息的响应
  */
-public class MetaMessage {
-    private static final String RECV_TYPE_KEY = "ReceiveMsgType";
+public class MqMessage {
     private static final String REQUEST_ID_KEY = "request_id";
     private static final String REQUEST_ID_ALIAS_KEY = "id";
     private static final String EXTRA_KEY = "extra";
-    private static final String SUCCESS_KEY = "success";
+
     /**
      * 消费的队列名称
      */
@@ -28,22 +26,22 @@ public class MetaMessage {
     /**
      * 消费到的消息列表
      */
-    private List<InBoundMessage> inBoundMessageMessages;
+    private List<MetaInflowMessage> metaInflowMessages;
 
-    public MetaMessage(String queue, List<InBoundMessage> inBoundMessageMessages) {
+    public MqMessage(String queue, List<MetaInflowMessage> metaInflowMessages) {
         this.queue = queue;
-        this.inBoundMessageMessages = inBoundMessageMessages;
+        this.metaInflowMessages = metaInflowMessages;
     }
 
     public String getQueue() {
         return queue;
     }
 
-    public List<InBoundMessage> getMessages() {
-        return inBoundMessageMessages;
+    public List<MetaInflowMessage> getMessages() {
+        return metaInflowMessages;
     }
 
-    private static void parseMessage(List metaMessageList, List<InBoundMessage> inBoundMessageMessages) {
+    private static void parseMessage(List metaMessageList, List<MetaInflowMessage> metaInflowMessages) {
         String messageId = (String) metaMessageList.get(0);
         Map<String, Object> tmpContentMap = new HashMap<>();
         List contentList = (List) metaMessageList.get(1);
@@ -53,53 +51,44 @@ public class MetaMessage {
             tmpContentMap.put(key, value);
         }
 
-        InBoundMessage inBoundMessage = new InBoundMessage();
 
-        Header header = new Header();
-        header.setMessageId(messageId);
+        MetaContext metaContext = new MetaContext();
+        metaContext.setMessageId(messageId);
         if (tmpContentMap.get(REQUEST_ID_KEY) != null) {
-            header.setRequestId((String) tmpContentMap.get(REQUEST_ID_KEY));
+            metaContext.setRequestId((String) tmpContentMap.get(REQUEST_ID_KEY));
             tmpContentMap.remove(REQUEST_ID_KEY);
         }
         if (tmpContentMap.get(REQUEST_ID_ALIAS_KEY) != null) {
-            header.setRequestId((String) tmpContentMap.get(REQUEST_ID_ALIAS_KEY));
+            metaContext.setRequestId((String) tmpContentMap.get(REQUEST_ID_ALIAS_KEY));
             tmpContentMap.remove(REQUEST_ID_ALIAS_KEY);
         }
-        if (tmpContentMap.get(RECV_TYPE_KEY) != null) {
-            header.setReceiveMsgType(
-                    NodeReceiveMsgType.getByCode((String) tmpContentMap.get(RECV_TYPE_KEY)));
-            tmpContentMap.remove(RECV_TYPE_KEY);
-        } else {
-            header.setReceiveMsgType(NodeReceiveMsgType.async);
-        }
+
         if (tmpContentMap.get(EXTRA_KEY) != null) {
             Extra extra = JSONObject.parseObject((String) tmpContentMap.get(EXTRA_KEY), Extra.class);
             if (extra == null) {
                 extra = new Extra();
             }
             extra.append(ConstantConfiguration.getNodeId());
-            header.setExtra(extra);
+            metaContext.setExtra(extra);
             tmpContentMap.remove(EXTRA_KEY);
         } else {
             Extra extra = new Extra();
             extra.append(ConstantConfiguration.getNodeId());
-            header.setExtra(extra);
-        }
-        if (tmpContentMap.get(SUCCESS_KEY) != null) {
-            header.setSuccess(Boolean.valueOf((String) tmpContentMap.get(SUCCESS_KEY)));
-            tmpContentMap.remove(SUCCESS_KEY);
+            metaContext.setExtra(extra);
         }
 
-        inBoundMessage.setHeader(header);
+
+        MetaInflowMessage metaInflowMessage = new MetaInflowMessage();
+        metaInflowMessage.setMetaContext(metaContext);
 
         tmpContentMap.keySet().stream().forEach(key -> {
             InPort inPort;
-            if ((inPort = ConstantConfiguration.getInPortByUuid(key)) != null) {
-                inBoundMessage.append(inPort, tmpContentMap.get(key));
+            if ((inPort = ConstantConfiguration.getByInPortUuid(key)) != null) {
+                metaInflowMessage.append(inPort, tmpContentMap.get(key));
             }
         });
 
-        inBoundMessageMessages.add(inBoundMessage);
+        metaInflowMessages.add(metaInflowMessage);
     }
 
     /**
@@ -132,14 +121,14 @@ public class MetaMessage {
      *                10) "{\"global\":{}}"
      * @return StreamMessage
      */
-    public static MetaMessage convert(List metaMsg) {
+    public static MqMessage convert(List metaMsg) {
         String queue = (String) metaMsg.get(0);
-        List<InBoundMessage> inBoundMessageMessages = new ArrayList<>();
+        List<MetaInflowMessage> metaInflowMessages = new ArrayList<>();
 
         List metaMessageList = (List) metaMsg.get(1);
         metaMessageList.forEach(metaMessage -> {
-            parseMessage((List) metaMessage, inBoundMessageMessages);
+            parseMessage((List) metaMessage, metaInflowMessages);
         });
-        return new MetaMessage(queue, inBoundMessageMessages);
+        return new MqMessage(queue, metaInflowMessages);
     }
 }

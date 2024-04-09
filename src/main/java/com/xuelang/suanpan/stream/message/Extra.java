@@ -1,26 +1,26 @@
 package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSONObject;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 消息扩展信息
  */
 public class Extra {
-    //消息经过的节点链
+    // 消息经过的节点链
     private List<MsgChainNode> msgChain = new ArrayList<>();
 
     // 默认是长期有效
     private Long expireTime = Long.MAX_VALUE;
 
-    //兼容老版本的已有的配置
+    // 兼容老版本的已有的配置
     private JSONObject global;
 
-    public Extra(){
+    public Extra() {
         global = new JSONObject();
     }
 
@@ -28,9 +28,15 @@ public class Extra {
         return msgChain;
     }
 
+    public void setMsgChain(List<MsgChainNode> msgChain) {
+        this.msgChain = msgChain;
+    }
+
     public void append(String nodeId) {
         MsgChainNode node = new MsgChainNode(nodeId, new Date());
-        this.msgChain.add(node);
+        if (!this.msgChain.contains(node)) {
+            this.msgChain.add(node);
+        }
     }
 
     public void updateMsgNodeOutTime() {
@@ -51,51 +57,13 @@ public class Extra {
         this.global = global;
     }
 
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this)
-                .append("global", global)
-                .toString();
-    }
-
     public boolean isExpired() {
         return System.currentTimeMillis() > expireTime;
     }
 
-
-    class MsgChainNode {
-        private String nodeId;
-        private Date inTime;
-        private Date outTime;
-
-        public MsgChainNode(String nodeId, Date inTime) {
-            this.nodeId = nodeId;
-            this.inTime = inTime;
-        }
-
-        public String getNodeId() {
-            return nodeId;
-        }
-
-        public void setNodeId(String nodeId) {
-            this.nodeId = nodeId;
-        }
-
-        public Date getInTime() {
-            return inTime;
-        }
-
-        public void setInTime(Date inTime) {
-            this.inTime = inTime;
-        }
-
-        public Date getOutTime() {
-            return outTime;
-        }
-
-        public void setOutTime(Date outTime) {
-            this.outTime = outTime;
-        }
+    public void appendExtra(String key, Object value) {
+        Objects.requireNonNull(key, "append extra info key cannot be null");
+        Objects.requireNonNull(value, "append extra info value cannot be null");
+        global.put(key, value);
     }
-
 }

@@ -1,19 +1,22 @@
 package com.xuelang.suanpan.stream.handler;
 
-import com.xuelang.suanpan.annotation.AsyncHandlerMapping;
-import com.xuelang.suanpan.annotation.SuanpanHandler;
-import com.xuelang.suanpan.annotation.SyncHandlerMapping;
+import com.xuelang.suanpan.annotation.InflowMapping;
+import com.xuelang.suanpan.annotation.StreamHandler;
+import com.xuelang.suanpan.annotation.SyncInflowMapping;
 import com.xuelang.suanpan.annotation.validator.HandlerRuntimeValidator;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.common.entities.io.InPort;
 import com.xuelang.suanpan.common.entities.io.OutPort;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.*;
+import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -21,66 +24,64 @@ public class HandlerScanner {
 
     private static final String CLASS_FILE_EXTENSION = ".class";
 
-    public static Map<InPort, HandlerMethodEntry> scan() {
-        Map<InPort, HandlerMethodEntry> instances = new HashMap<>();
-        Class<?> mainClass = getMainClass();
-        String mainPackage = getPackageName(mainClass);
-        log.info("suanpan sdk begin scan main package: {} to create suanpan handlers", mainPackage);
+    public static void scan(HandlerRegistry registry) {
+        Class<?> mainClass = getStartClass();
+        String basePackage = getPackageName(mainClass);
+        log.info("suanpan sdk begin scan main package: {} to create suanpan handlers", basePackage);
         List<Class<?>> classes = null;
         try {
-            classes = getClasses(mainPackage);
+            classes = getClasses(basePackage);
         } catch (Exception e) {
+            log.error("scan handler error, " + e.getMessage(), e);
             throw new RuntimeException(e);
         }
 
         // 找到带有指定注解的类，并实例化
         classes.stream().parallel().forEach(clazz -> {
-            Annotation annotation = clazz.getAnnotation(SuanpanHandler.class);
+            Annotation annotation = clazz.getAnnotation(StreamHandler.class);
             if (annotation != null) {
                 HandlerRuntimeValidator.validateHandlerPortValues(clazz);
                 try {
                     Object instance = clazz.getDeclaredConstructor().newInstance();
-
                     Method[] methods = clazz.getDeclaredMethods();
-                    List<Method> filteredMethods = Arrays.stream(methods).filter(method -> (method.isAnnotationPresent(AsyncHandlerMapping.class)
-                            || method.isAnnotationPresent(SyncHandlerMapping.class))).collect(Collectors.toList());
-
+                    List<Method> filteredMethods = Arrays.stream(methods).filter(method -> (method.isAnnotationPresent(InflowMapping.class)
+                            || method.isAnnotationPresent(SyncInflowMapping.class))).collect(Collectors.toList());
                     for (Method method : filteredMethods) {
                         HandlerMethodEntry handlerMethodEntry = new HandlerMethodEntry();
                         handlerMethodEntry.setInstance(instance);
                         handlerMethodEntry.setMethod(method);
-                        if (method.isAnnotationPresent(AsyncHandlerMapping.class)) {
-                            AsyncHandlerMapping asyncHandlerMapping = method.getAnnotation(AsyncHandlerMapping.class);
-                            handlerMethodEntry.setSync(false);
-                            List<OutPort> outPorts = new ArrayList<>();
-                            for (int index : asyncHandlerMapping.default_outport_index()) {
-                                outPorts.add(ConstantConfiguration.getOutPortByIndex(index));
+                        if (method.isAnnotationPresent(InflowMapping.class)) {
+                            InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
+                            List<OutPort> defaultSpecifiedOutPorts = new ArrayList<>();
+                            for (int number : inflowMapping.default_outport_numbers()) {
+                                defaultSpecifiedOutPorts.add(ConstantConfiguration.getByOutPortNumber(number));
                             }
-                            handlerMethodEntry.setSpecifiedDefaultOutPorts(outPorts);
-                            instances.put(ConstantConfiguration.getInPortByIndex(asyncHandlerMapping.inport_index()), handlerMethodEntry);
+                            if (CollectionUtils.isEmpty(defaultSpecifiedOutPorts)){
+                                defaultSpecifiedOutPorts = ConstantConfiguration.getOutPorts();
+                            }
+                            handlerMethodEntry.setSpecifiedDefaultOutPorts(defaultSpecifiedOutPorts);
+                            registry.regist(ConstantConfiguration.getByInPortNumber(inflowMapping.inport_number()), handlerMethodEntry);
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                         } else {
-                            SyncHandlerMapping syncHandlerMapping = method.getAnnotation(SyncHandlerMapping.class);
-                            handlerMethodEntry.setSync(true);
-                            List<OutPort> outPorts = new ArrayList<>();
-                            for (int index : syncHandlerMapping.default_outport_index()) {
-                                outPorts.add(ConstantConfiguration.getOutPortByIndex(index));
+                            SyncInflowMapping syncInflowMapping = method.getAnnotation(SyncInflowMapping.class);
+                            List<OutPort> defaultSpecifiedOutPorts = new ArrayList<>();
+                            for (int number : syncInflowMapping.default_outport_numbers()) {
+                                defaultSpecifiedOutPorts.add(ConstantConfiguration.getByOutPortNumber(number));
                             }
-                            handlerMethodEntry.setSpecifiedDefaultOutPorts(outPorts);
-                            for (int index = 1; index <= ConstantConfiguration.getMaxInPortIndex(); index++) {
-                                instances.put(ConstantConfiguration.getInPortByIndex(index), handlerMethodEntry);
+                            if (CollectionUtils.isEmpty(defaultSpecifiedOutPorts)){
+                                defaultSpecifiedOutPorts = ConstantConfiguration.getOutPorts();
                             }
-
+                            handlerMethodEntry.setSpecifiedDefaultOutPorts(defaultSpecifiedOutPorts);
+                            registry.regist(null, handlerMethodEntry);
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                         }
                     }
                 } catch (Exception e) {
+                    log.error("regist handler error", e);
                     throw new RuntimeException(e);
                 }
             }
         });
-
-        return instances;
     }
 
     private static List<Class<?>> getClasses(String packageName) throws Exception {
@@ -94,6 +95,7 @@ public class HandlerScanner {
                 scanDirectory(directory, packageName, classes);
             }
         }
+
         return classes;
     }
 
@@ -122,6 +124,31 @@ public class HandlerScanner {
             log.error("get main class error", e);
         }
         throw new RuntimeException("Main class not found");
+    }
+
+    public static Class<?> getStartClass() {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        try {
+            // 获取 MANIFEST.MF 文件输入流
+            Enumeration<URL> urls = classLoader.getResources("META-INF/MANIFEST.MF");
+            while (urls.hasMoreElements()) {
+                URL url = urls.nextElement();
+                try (InputStream inputStream = url.openStream()) {
+                    Manifest manifest = new Manifest(inputStream);
+                    String startClassName = manifest.getMainAttributes().getValue("Start-Class");
+                    if (startClassName != null) {
+                        return Class.forName(startClassName);
+                    }
+                } catch (ClassNotFoundException e) {
+                    log.error("get start-class from META-INF/MANIFEST.MF error", e);
+                    throw new RuntimeException(e);
+                }
+            }
+        } catch (IOException ex) {
+            log.error("get start-class from META-INF/MANIFEST.MF error", ex);
+        }
+
+        return getMainClass();
     }
 
     private static String getPackageName(Class<?> clazz) {

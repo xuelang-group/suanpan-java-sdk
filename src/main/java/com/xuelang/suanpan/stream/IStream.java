@@ -1,22 +1,23 @@
 package com.xuelang.suanpan.stream;
 
-import com.xuelang.suanpan.common.entities.io.OutPort;
-import com.xuelang.suanpan.stream.handler.response.PollingResponse;
-import com.xuelang.suanpan.stream.message.Extra;
+import com.xuelang.suanpan.common.exception.StreamGlobalException;
+import com.xuelang.suanpan.stream.handler.AbstractStreamHandler;
+import com.xuelang.suanpan.stream.message.Context;
+import com.xuelang.suanpan.stream.message.InflowMessage;
+import com.xuelang.suanpan.stream.message.OutflowMessage;
 
-import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public interface IStream {
+
     /**
-     * 主动发送流消息
-     * @param data
+     *
+     * @param outflowMessage
      * @param context
-     * @param validitySeconds
      * @return
      */
-    String publish(Map<OutPort, Object> data, @Nullable String requestId, @Nullable Long validitySeconds, @Nullable Extra extra);
+    String publish(OutflowMessage outflowMessage, Context context) throws StreamGlobalException;
+
 
     /**
      * 主动轮询流消息
@@ -25,5 +26,19 @@ public interface IStream {
      * @param unit    超时时间单位
      * @return 轮询到的算盘handler请求
      */
-    PollingResponse polling(long timeout, TimeUnit unit);
+    InflowMessage polling(long timeout, TimeUnit unit);
+
+    /**
+     * 订阅输入端口数据
+     * @param inPortNum
+     * @param handler
+     */
+    void subscribe(Integer inPortNum, AbstractStreamHandler handler) throws StreamGlobalException;
+
+    /**
+     * 通用订阅
+     * @param handler
+     * @throws Exception
+     */
+    void subscribe(AbstractStreamHandler handler) throws StreamGlobalException;
 }

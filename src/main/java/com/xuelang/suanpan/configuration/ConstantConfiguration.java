@@ -1,14 +1,13 @@
 package com.xuelang.suanpan.configuration;
 
-
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.xuelang.suanpan.common.utils.HttpUtil;
-import com.xuelang.suanpan.common.exception.NoSuchInPortException;
 import com.xuelang.suanpan.common.entities.connection.Connection;
-import com.xuelang.suanpan.common.entities.io.InPort;
 import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
+import com.xuelang.suanpan.common.entities.io.InPort;
 import com.xuelang.suanpan.common.entities.io.OutPort;
+import com.xuelang.suanpan.common.exception.StreamGlobalException;
+import com.xuelang.suanpan.common.utils.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -21,8 +20,8 @@ public class ConstantConfiguration {
     private static Map<String, InPort> inPortMap = new HashMap<>();
     private static Map<String, OutPort> outPortMap = new HashMap<>();
     private static Map<String, Object> spParamMap = new HashMap<>();
-    private static Integer Max_InPort_Index = -1;
-    private static Integer Max_OutPort_Index = -1;
+    private static Integer Max_InPort_Number = -1;
+    private static Integer Max_OutPort_Number = -1;
     private static NodeReceiveMsgType receiveMsgType;
 
     private static Map<OutPort, List<Connection>> outPortConnectionMap = new HashMap<>();
@@ -33,7 +32,7 @@ public class ConstantConfiguration {
             JSONObject spNodeInfo = JSONObject.parseObject(new String(Base64.getDecoder().decode(spNodeInfoBase64Str)));
             JSONObject inputs = spNodeInfo.getJSONObject("inputs");
             if (inputs != null && !inputs.isEmpty()) {
-                final int[] maxInportIndex = {-1};
+                final int[] maxInportNumber = {-1};
                 inputs.values().stream().forEach(v -> {
                     InPort inPort = null;
                     Constructor<InPort> constructor;
@@ -51,20 +50,20 @@ public class ConstantConfiguration {
                     }
 
                     inPortMap.put(inPort.getUuid(), inPort);
-                    int index = Integer.valueOf(inPort.getUuid().substring(2));
-                    if (index > maxInportIndex[0]) {
-                        maxInportIndex[0] = index;
+                    int number = Integer.valueOf(inPort.getUuid().substring(2));
+                    if (number > maxInportNumber[0]) {
+                        maxInportNumber[0] = number;
                     }
                 });
 
-                if (maxInportIndex[0] > 0) {
-                    Max_InPort_Index = maxInportIndex[0];
+                if (maxInportNumber[0] > 0) {
+                    Max_InPort_Number = maxInportNumber[0];
                 }
             }
 
             JSONObject outputs = spNodeInfo.getJSONObject("outputs");
             if (outputs != null && !outputs.isEmpty()) {
-                final int[] maxOutportIndex = {-1};
+                final int[] maxOutPortNumber = {-1};
                 outputs.values().stream().forEach(v -> {
                     OutPort outPort = null;
                     Constructor<OutPort> constructor;
@@ -82,14 +81,14 @@ public class ConstantConfiguration {
                     }
 
                     outPortMap.put(outPort.getUuid(), outPort);
-                    int index = Integer.valueOf(outPort.getUuid().substring(3));
-                    if (index > maxOutportIndex[0]) {
-                        maxOutportIndex[0] = index;
+                    int number = Integer.valueOf(outPort.getUuid().substring(3));
+                    if (number > maxOutPortNumber[0]) {
+                        maxOutPortNumber[0] = number;
                     }
                 });
 
-                if (maxOutportIndex[0] > 0) {
-                    Max_OutPort_Index = maxOutportIndex[0];
+                if (maxOutPortNumber[0] > 0) {
+                    Max_OutPort_Number = maxOutPortNumber[0];
                 }
             }
         }
@@ -133,9 +132,10 @@ public class ConstantConfiguration {
                     String srcOutPortUUID = item.getJSONObject("src").getString("port");
                     OutPort outPort = null;
                     try {
-                        outPort = OutPort.build(srcOutPortUUID);
-                    } catch (NoSuchInPortException e) {
-                        throw new RuntimeException(e);
+                        outPort = OutPort.bind(srcOutPortUUID);
+                    } catch (StreamGlobalException e) {
+                        log.error("bind outPort error", e);
+                        throw e;
                     }
 
                     JSONObject tgt = item.getJSONObject("tgt");
@@ -232,21 +232,21 @@ public class ConstantConfiguration {
         return userId.toString();
     }
 
-    public static InPort getInPortByUuid(String key) {
-        return inPortMap.get(key);
-    }
-
-    public static OutPort getOutPortByIndex(Integer outPortIndex) {
-        String key = "out" + outPortIndex;
+    public static OutPort getByOutPortNumber(Integer outPortNumber) {
+        String key = "out" + outPortNumber;
         return outPortMap.get(key);
     }
 
-    public static OutPort getOutPortByUUID(String outPortUUID) {
+    public static OutPort getByOutPortUUID(String outPortUUID) {
         return outPortMap.get(outPortUUID);
     }
 
-    public static InPort getInPortByIndex(Integer inportIndex) {
-        String key = "in" + inportIndex;
+    public static InPort getByInPortUuid(String key) {
+        return inPortMap.get(key);
+    }
+
+    public static InPort getByInPortNumber(Integer inportNumber) {
+        String key = "in" + inportNumber;
         return inPortMap.get(key);
     }
 
@@ -313,12 +313,12 @@ public class ConstantConfiguration {
         return tmp;
     }
 
-    public static Integer getMaxInPortIndex() {
-        return Max_InPort_Index;
+    public static Integer getMaxInPortNumber() {
+        return Max_InPort_Number;
     }
 
-    public static Integer getMaxOutPortIndex() {
-        return Max_OutPort_Index;
+    public static Integer getMaxOutPortNumber() {
+        return Max_OutPort_Number;
     }
 
 

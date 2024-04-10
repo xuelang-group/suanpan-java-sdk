@@ -85,7 +85,7 @@ public class OutflowMessage {
             return this;
         }
 
-        public OutboundMessageBuilder setExpire(Long validitySeconds){
+        public OutboundMessageBuilder withExpire(Long validitySeconds){
             if (validitySeconds != null && validitySeconds > 0) {
                 outflowMessage.validitySeconds = validitySeconds;
             }

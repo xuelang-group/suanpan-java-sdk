@@ -4,8 +4,8 @@ import com.xuelang.suanpan.annotation.InflowMapping;
 import com.xuelang.suanpan.annotation.StreamHandler;
 import com.xuelang.suanpan.annotation.SyncInflowMapping;
 import com.xuelang.suanpan.annotation.validator.HandlerRuntimeValidator;
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.common.entities.io.OutPort;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -15,7 +15,12 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
@@ -36,10 +41,16 @@ public class HandlerScanner {
             throw new RuntimeException(e);
         }
 
+        if (CollectionUtils.isEmpty(classes)){
+            log.warn("scanned no class found");
+
+        }
+
         // 找到带有指定注解的类，并实例化
         classes.stream().parallel().forEach(clazz -> {
             Annotation annotation = clazz.getAnnotation(StreamHandler.class);
             if (annotation != null) {
+                log.info("scanned stream handler:{}", clazz.getName());
                 HandlerRuntimeValidator.validateHandlerPortValues(clazz);
                 try {
                     Object instance = clazz.getDeclaredConstructor().newInstance();
@@ -84,15 +95,31 @@ public class HandlerScanner {
         });
     }
 
-    private static List<Class<?>> getClasses(String packageName) throws Exception {
+    public static List<Class<?>> getClasses(String packageName) throws IOException, ClassNotFoundException {
         List<Class<?>> classes = new ArrayList<>();
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         String path = packageName.replace('.', '/');
         URL resource = classLoader.getResource(path);
         if (resource != null) {
-            File directory = new File(resource.getFile());
-            if (directory.exists()) {
-                scanDirectory(directory, packageName, classes);
+            if (resource.getProtocol().equals("file")) {
+                // 普通文件系统中的目录
+                File directory = new File(resource.getFile());
+                if (directory.exists()) {
+                    scanDirectory(directory, packageName, classes);
+                }
+            } else if (resource.getProtocol().equals("jar")) {
+                // 打包成 JAR 文件的目录
+                String jarPath = resource.getPath().substring(5, resource.getPath().indexOf("!"));
+                JarFile jarFile = new JarFile(jarPath);
+                Enumeration<JarEntry> entries = jarFile.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+                    if (entry.getName().endsWith(".class")) {
+                        String className = entry.getName().replace("BOOT-INF/classes/","").replace("/", ".").replace(".class", "");
+                        classes.add(Class.forName(className));
+                    }
+                }
+                jarFile.close();
             }
         }
 
@@ -105,10 +132,9 @@ public class HandlerScanner {
             for (File file : files) {
                 if (file.isDirectory()) {
                     scanDirectory(file, packageName + "." + file.getName(), classes);
-                } else if (file.getName().endsWith(CLASS_FILE_EXTENSION)) {
-                    String className = packageName + '.' + file.getName().substring(0, file.getName().length() - CLASS_FILE_EXTENSION.length());
+                } else if (file.getName().endsWith(".class")) {
+                    String className = packageName + "." + file.getName().substring(0, file.getName().length() - 6);
                     classes.add(Class.forName(className));
-                    log.info("suanpan sdk scanned clazz: {}", className);
                 }
             }
         }

@@ -1,17 +1,5 @@
 package com.xuelang.suanpan.common.entities.io;
 
-/**
- * inPorts: [       // 输入桩
- *         {
- *           uuid: 'in1',
- *           type: 'data',
- *           subType: 'all',
- *           description: {
- *             zh_CN: '输入1'
- *           }
- *         }
- *       ]
- */
 public abstract class BasePort {
     protected String uuid;
     protected String name;

@@ -44,7 +44,7 @@ public class HandlerRegistry {
 
     public synchronized void regist(@Nullable InPort inPort, HandlerMethodEntry entry) throws StreamGlobalException {
         if (globalMethodEntry != null) {
-            throw new RuntimeException("there is already has global handler, cannot regist hanlder again！");
+            throw new StreamGlobalException(GlobalExceptionType.DuplicationHandlerException);
         }
 
         if (inPort == null) {

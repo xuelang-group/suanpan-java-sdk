@@ -1,8 +1,6 @@
 package com.xuelang.suanpan.stream.message;
 
 
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
-
 /**
  * 消息上下文
  */

@@ -114,8 +114,8 @@ public class HandlerScanner {
                 Enumeration<JarEntry> entries = jarFile.entries();
                 while (entries.hasMoreElements()) {
                     JarEntry entry = entries.nextElement();
-                    if (entry.getName().endsWith(".class")) {
-                        String className = entry.getName().replace("BOOT-INF/classes/","").replace("/", ".").replace(".class", "");
+                    if (entry.getName().endsWith(CLASS_FILE_EXTENSION)) {
+                        String className = entry.getName().replace("BOOT-INF/classes/","").replace("/", ".").replace(CLASS_FILE_EXTENSION, "");
                         classes.add(Class.forName(className));
                     }
                 }
@@ -132,7 +132,7 @@ public class HandlerScanner {
             for (File file : files) {
                 if (file.isDirectory()) {
                     scanDirectory(file, packageName + "." + file.getName(), classes);
-                } else if (file.getName().endsWith(".class")) {
+                } else if (file.getName().endsWith(CLASS_FILE_EXTENSION)) {
                     String className = packageName + "." + file.getName().substring(0, file.getName().length() - 6);
                     classes.add(Class.forName(className));
                 }

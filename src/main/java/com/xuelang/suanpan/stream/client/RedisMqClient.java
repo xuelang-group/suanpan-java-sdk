@@ -3,6 +3,7 @@ package com.xuelang.suanpan.stream.client;
 import com.alibaba.fastjson2.JSON;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.common.pool.ThreadPool;
+import com.xuelang.suanpan.common.utils.SerializeUtil;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
 import com.xuelang.suanpan.stream.message.InflowMessage;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -147,14 +149,14 @@ public class RedisMqClient extends AbstractMqClient {
     }
 
     @Override
-    public InflowMessage polling(long timeout, TimeUnit unit) {
+    public InflowMessage polling(long timeoutMillis) {
         lock.lock();
         inflowMessage = null;
         isPolling = true;
         try {
-            pollingAvailableCondition.await(timeout, unit);
+            pollingAvailableCondition.await(timeoutMillis, TimeUnit.MILLISECONDS);
             isPolling = false;
-            log.info("polling message:{}", JSON.toJSONString(inflowMessage));
+            log.info("polled message:{}", inflowMessage.toString());
         } catch (InterruptedException e) {
             log.error("polling mq message failed!");
         } finally {
@@ -177,7 +179,9 @@ public class RedisMqClient extends AbstractMqClient {
             consumeArgs.add(CommandKeyword.NOACK);
         }
 
-        ThreadPool.pool().submit(new InfiniteConsumeTask(consumeArgs, proxy));
+        Thread consumerThread = new Thread(new InfiniteConsumeTask(consumeArgs, proxy));
+        consumerThread.setName("consumer_thread");
+        consumerThread.start();
     }
 
 
@@ -200,7 +204,7 @@ public class RedisMqClient extends AbstractMqClient {
                 } catch (InterruptedException | ExecutionException e) {
                     log.error("publish message to MQ error", e);
                 } finally {
-                    log.info("publish queue data:{}", JSON.toJSONString(entry.getValue()));
+                    log.info("publish to queue={}, data={}", entry.getKey(), SerializeUtil.serialize(entry.getValue()));
                 }
             });
 
@@ -214,7 +218,7 @@ public class RedisMqClient extends AbstractMqClient {
                 log.error("publish message to MQ error", e);
                 return null;
             } finally {
-                log.info("publish queue data:{}", JSON.toJSONString(outData));
+                log.info("publish to queue={}, data={}", metaOutflowMessage.getSendMasterQueue(), SerializeUtil.serialize(outData));
             }
         }
     }
@@ -279,39 +283,61 @@ public class RedisMqClient extends AbstractMqClient {
                     continue;
                 }
 
-
                 metaInflowMessages.stream().forEach(metaInflowMessage -> {
-                    ThreadPool.pool().submit(() -> {
+                    ack(queue, group, metaInflowMessage.getMetaContext().getMessageId());
+                    if (metaInflowMessage.isExpired()) {
+                        log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
+                        return;
+                    }
+
+                    if (metaInflowMessage.isEmpty()) {
+                        log.info("message has no inPort data, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
+                        return;
+                    }
+
+                    if (isPolling) {
+                        lock.lock();
                         try {
-                            if (metaInflowMessage.isExpired()) {
-                                log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
-                                return;
-                            }
-
-                            if (metaInflowMessage.isEmpty()) {
-                                log.info("message has no inPort data, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
-                                return;
-                            }
-                            if (isPolling) {
-                                inflowMessage = metaInflowMessage.covert();
-                                lock.lock();
-                                pollingAvailableCondition.signal();
-                            } else {
-                                MetaOutflowMessage metaOutflowMessage = proxy.invoke(metaInflowMessage);
-                                if (metaOutflowMessage != null && !metaOutflowMessage.isEmpty()) {
-                                    publish(metaOutflowMessage);
-                                }
-                            }
-
-                            ack(queue, group, metaInflowMessage.getMetaContext().getMessageId());
-                        } catch (StreamGlobalException e) {
-                            log.error("invoke suanpan handler error", e);
-                            ack(queue, group, metaInflowMessage.getMetaContext().getMessageId());
+                            inflowMessage = metaInflowMessage.covert();
+                            pollingAvailableCondition.signal();
                         } finally {
                             lock.unlock();
                         }
-                    });
+                    }
+
+                    InvokeHandlerTask invokeHandlerTask = new InvokeHandlerTask(metaInflowMessage);
+                    try {
+                        ThreadPool.pool().submit(invokeHandlerTask);
+                    } catch (RejectedExecutionException e) {
+                        try {
+                            log.warn("consume stream message too fast and invoke too late, need wait a moment to" +
+                                    " consume message and submit invoke task!");
+                            ThreadPool.pool().getQueue().put(invokeHandlerTask);
+                        } catch (InterruptedException ex) {
+                            log.error("wait a moment to consume message and submit invoke task", e);
+                        }
+                    }
                 });
+            }
+        }
+    }
+
+    private class InvokeHandlerTask implements Runnable {
+        private final MetaInflowMessage metaInflowMessage;
+
+        public InvokeHandlerTask(MetaInflowMessage metaInflowMessage) {
+            this.metaInflowMessage = metaInflowMessage;
+        }
+
+        @Override
+        public void run() {
+            try {
+                MetaOutflowMessage metaOutflowMessage = proxy.invoke(metaInflowMessage);
+                if (metaOutflowMessage != null && !metaOutflowMessage.isEmpty()) {
+                    publish(metaOutflowMessage);
+                }
+            } catch (StreamGlobalException e) {
+                log.error("invoke suanpan handler error", e);
             }
         }
     }

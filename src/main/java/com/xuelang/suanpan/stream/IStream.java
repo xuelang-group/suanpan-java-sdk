@@ -22,11 +22,10 @@ public interface IStream {
     /**
      * 主动轮询流消息
      *
-     * @param timeout 超时时间
-     * @param unit    超时时间单位
+     * @param timeoutMillis 超时时间
      * @return 轮询到的算盘handler请求
      */
-    InflowMessage polling(long timeout, TimeUnit unit);
+    InflowMessage polling(long timeoutMillis);
 
     /**
      * 订阅输入端口数据

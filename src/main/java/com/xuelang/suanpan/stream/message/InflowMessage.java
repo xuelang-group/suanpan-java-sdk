@@ -1,5 +1,6 @@
 package com.xuelang.suanpan.stream.message;
 
+import com.alibaba.fastjson2.JSON;
 import com.xuelang.suanpan.common.entities.io.InPort;
 
 import java.util.Map;
@@ -7,7 +8,6 @@ import java.util.Map;
 public class InflowMessage {
     private Context context;
     private Map<InPort, Object> data;
-
 
     public Context getContext() {
         return context;
@@ -24,5 +24,25 @@ public class InflowMessage {
 
     public void setData(Map<InPort, Object> data) {
         this.data = data;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("context=").append(context!=null? JSON.toJSONString(context):"").append(",")
+                .append("data={");
+        if (data == null || data.isEmpty()){
+            sb.append("}");
+        } else{
+            data.entrySet().stream().forEach(entry->{
+                sb.append(entry.getKey().getUuid()).append("=").append(entry.getValue().toString()).append(",");
+            });
+
+            sb.deleteCharAt(sb.length()-1);
+            sb.append("}");
+        }
+
+
+        return sb.toString();
     }
 }

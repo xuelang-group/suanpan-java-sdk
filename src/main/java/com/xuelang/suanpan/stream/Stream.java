@@ -68,8 +68,8 @@ public class Stream extends BaseSpDomainEntity implements IStream {
 
 
     @Override
-    public InflowMessage polling(long timeout, TimeUnit unit) {
-        return mqClient.polling(timeout, unit);
+    public synchronized InflowMessage polling(long timeoutMillis) {
+        return mqClient.polling(timeoutMillis);
     }
 
     @Override

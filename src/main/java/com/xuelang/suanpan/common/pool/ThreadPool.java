@@ -2,10 +2,7 @@ package com.xuelang.suanpan.common.pool;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class ThreadPool {
     private static final ThreadFactory namedThreadPoolFactory = new ThreadFactoryBuilder().setNameFormat("suanpan-pool-%d").build();
@@ -18,12 +15,12 @@ public class ThreadPool {
             synchronized (namedThreadPoolFactory) {
                 if (threadPoolExecutor == null) {
                     threadPoolExecutor = new ThreadPoolExecutor(cpus, cpus * 2, 0,
-                            TimeUnit.MILLISECONDS, new LinkedBlockingDeque<>(1024), namedThreadPoolFactory,
-                            new ThreadPoolExecutor.DiscardPolicy());
+                            TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(100), namedThreadPoolFactory);
                 }
             }
         }
 
         return threadPoolExecutor;
     }
+
 }

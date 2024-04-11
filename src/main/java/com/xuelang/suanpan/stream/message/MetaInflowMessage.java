@@ -45,8 +45,10 @@ public class MetaInflowMessage {
         }
 
         InflowMessage inflowMessage = new InflowMessage();
-        Context context = Context.builder().setExt(metaContext.getExtra()).setMessageId(metaContext.getRequestId()).build();
-                inflowMessage.setContext(context);
+        Context context = new Context();
+        context.setExt(metaContext.getExtra());
+        context.setMessageId(metaContext.getRequestId());
+        inflowMessage.setContext(context);
         inflowMessage.setData(inPortDataMap);
         return inflowMessage;
     }

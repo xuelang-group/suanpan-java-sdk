@@ -10,11 +10,5 @@ public @interface InflowMapping {
      * 异步订阅的输入桩端口序号
      * @return 输入桩端口序号
      */
-    int inport_number() default -1;
-
-    /**
-     * 处理结果发送的输出桩端口集合
-     * @return 输出桩端口集合
-     */
-    int[] default_outport_numbers() default {};
+    int portIndex() default -1;
 }

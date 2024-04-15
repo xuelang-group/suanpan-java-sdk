@@ -4,8 +4,8 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.xuelang.suanpan.common.entities.connection.Connection;
 import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
-import com.xuelang.suanpan.common.entities.io.InPort;
-import com.xuelang.suanpan.common.entities.io.OutPort;
+import com.xuelang.suanpan.common.entities.io.Inport;
+import com.xuelang.suanpan.common.entities.io.Outport;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.common.utils.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -17,14 +17,13 @@ import java.util.*;
 
 @Slf4j
 public class ConstantConfiguration {
-    private static Map<String, InPort> inPortMap = new HashMap<>();
-    private static Map<String, OutPort> outPortMap = new HashMap<>();
+    private static Map<String, Inport> inportMap = new HashMap<>();
+    private static Map<String, Outport> outportMap = new HashMap<>();
     private static Map<String, Object> spParamMap = new HashMap<>();
-    private static Integer Max_InPort_Number = -1;
-    private static Integer Max_OutPort_Number = -1;
+    private static Integer Max_Inport_Index = -1;
     private static NodeReceiveMsgType receiveMsgType;
 
-    private static Map<OutPort, List<Connection>> outPortConnectionMap = new HashMap<>();
+    private static Map<Outport, List<Connection>> outPortConnectionMap = new HashMap<>();
 
     static {
         String spNodeInfoBase64Str = System.getenv("SP_NODE_INFO");
@@ -32,12 +31,12 @@ public class ConstantConfiguration {
             JSONObject spNodeInfo = JSONObject.parseObject(new String(Base64.getDecoder().decode(spNodeInfoBase64Str)));
             JSONObject inputs = spNodeInfo.getJSONObject("inputs");
             if (inputs != null && !inputs.isEmpty()) {
-                final int[] maxInportNumber = {-1};
+                final int[] maxInportIndex = {-1};
                 inputs.values().stream().forEach(v -> {
-                    InPort inPort = null;
-                    Constructor<InPort> constructor;
+                    Inport inPort = null;
+                    Constructor<Inport> constructor;
                     try {
-                        constructor = InPort.class.getDeclaredConstructor();
+                        constructor = Inport.class.getDeclaredConstructor();
                         constructor.setAccessible(true);
                         inPort = constructor.newInstance();
                         inPort.setUuid(((JSONObject) v).getString("uuid"));
@@ -49,26 +48,25 @@ public class ConstantConfiguration {
                         log.error("create inPort instant from spParam error", e);
                     }
 
-                    inPortMap.put(inPort.getUuid(), inPort);
+                    inportMap.put(inPort.getUuid(), inPort);
                     int number = Integer.valueOf(inPort.getUuid().substring(2));
-                    if (number > maxInportNumber[0]) {
-                        maxInportNumber[0] = number;
+                    if (number > maxInportIndex[0]) {
+                        maxInportIndex[0] = number;
                     }
                 });
 
-                if (maxInportNumber[0] > 0) {
-                    Max_InPort_Number = maxInportNumber[0];
+                if (maxInportIndex[0] > 0) {
+                    Max_Inport_Index = maxInportIndex[0];
                 }
             }
 
             JSONObject outputs = spNodeInfo.getJSONObject("outputs");
             if (outputs != null && !outputs.isEmpty()) {
-                final int[] maxOutPortNumber = {-1};
                 outputs.values().stream().forEach(v -> {
-                    OutPort outPort = null;
-                    Constructor<OutPort> constructor;
+                    Outport outPort = null;
+                    Constructor<Outport> constructor;
                     try {
-                        constructor = OutPort.class.getDeclaredConstructor();
+                        constructor = Outport.class.getDeclaredConstructor();
                         constructor.setAccessible(true);
                         outPort = constructor.newInstance();
                         outPort.setUuid(((JSONObject) v).getString("uuid"));
@@ -80,16 +78,8 @@ public class ConstantConfiguration {
                         log.error("create outPort instant from spParam error", e);
                     }
 
-                    outPortMap.put(outPort.getUuid(), outPort);
-                    int number = Integer.valueOf(outPort.getUuid().substring(3));
-                    if (number > maxOutPortNumber[0]) {
-                        maxOutPortNumber[0] = number;
-                    }
+                    outportMap.put(outPort.getUuid(), outPort);
                 });
-
-                if (maxOutPortNumber[0] > 0) {
-                    Max_OutPort_Number = maxOutPortNumber[0];
-                }
             }
         }
     }
@@ -130,9 +120,9 @@ public class ConstantConfiguration {
                     }
 
                     String srcOutPortUUID = item.getJSONObject("src").getString("port");
-                    OutPort outPort = null;
+                    Outport outPort = null;
                     try {
-                        outPort = OutPort.bind(srcOutPortUUID);
+                        outPort = Outport.bind(srcOutPortUUID);
                     } catch (StreamGlobalException e) {
                         log.error("bind outPort error", e);
                         throw e;
@@ -161,7 +151,7 @@ public class ConstantConfiguration {
         }
     }
 
-    public static List<Connection> getConnections(OutPort outPort){
+    public static List<Connection> getConnections(Outport outPort){
         if (outPortConnectionMap.isEmpty()){
             return null;
         }
@@ -232,26 +222,26 @@ public class ConstantConfiguration {
         return userId.toString();
     }
 
-    public static OutPort getByOutPortNumber(Integer outPortNumber) {
-        String key = "out" + outPortNumber;
-        return outPortMap.get(key);
+    public static Outport getByOutportIndex(Integer outportIndex) {
+        String key = "out" + outportIndex;
+        return outportMap.get(key);
     }
 
-    public static OutPort getByOutPortUUID(String outPortUUID) {
-        return outPortMap.get(outPortUUID);
+    public static Outport getByOutPortUUID(String outPortUUID) {
+        return outportMap.get(outPortUUID);
     }
 
-    public static InPort getByInPortUuid(String key) {
-        return inPortMap.get(key);
+    public static Inport getByInPortUuid(String key) {
+        return inportMap.get(key);
     }
 
-    public static InPort getByInPortNumber(Integer inportNumber) {
-        String key = "in" + inportNumber;
-        return inPortMap.get(key);
+    public static Inport getByInportIndex(Integer inportIndex) {
+        String key = "in" + inportIndex;
+        return inportMap.get(key);
     }
 
-    public static List<OutPort> getOutPorts() {
-        return new ArrayList<>(outPortMap.values());
+    public static List<Outport> getOutPorts() {
+        return new ArrayList<>(outportMap.values());
     }
 
     public static Long getQueueMaxSendLen() {
@@ -313,13 +303,7 @@ public class ConstantConfiguration {
         return tmp;
     }
 
-    public static Integer getMaxInPortNumber() {
-        return Max_InPort_Number;
+    public static Integer getInportMaxIndex() {
+        return Max_Inport_Index;
     }
-
-    public static Integer getMaxOutPortNumber() {
-        return Max_OutPort_Number;
-    }
-
-
 }

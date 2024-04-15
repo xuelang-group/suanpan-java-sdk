@@ -24,7 +24,7 @@ public class HandlerCompileValidator extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         TypeElement syncHandler = null;
         TypeElement asyncHandler = null;
-        Map<TypeElement, List<Integer>> asyncHandlerInPortNum = new HashMap<>();
+        Map<TypeElement, List<Integer>> asyncHandlerPortIndex = new HashMap<>();
         for (Element element : roundEnv.getElementsAnnotatedWith(StreamHandler.class)) {
             if (element.getKind() == ElementKind.CLASS) {
                 TypeElement handler = (TypeElement) element;
@@ -66,27 +66,22 @@ public class HandlerCompileValidator extends AbstractProcessor {
                         }
 
                         if (inflowMapping != null) {
-                            if (hasDuplicateOrNegative(inflowMapping.default_outport_numbers())) {
+                            if (inflowMapping.portIndex() <= 0 && inflowMapping.portIndex() != -1) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @" + InflowMapping.class.getSimpleName() + " outport_numbers values cannot be duplication or negative", element);
+                                        "Method: " + method + " @" + InflowMapping.class.getSimpleName() + " portIndex value cannot be negative", element);
+                            } else if (inflowMapping.portIndex() == -1 && asyncHandler != null) {
+                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                        "Already has a AsyncHandler which not specified portIndex to listen all " +
+                                                "inport data, so AsyncHandler cannot be duplication! Method: " + method, element);
                             }
 
-                            if (inflowMapping.inport_number() <= 0 && inflowMapping.inport_number() != -1) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @" + InflowMapping.class.getSimpleName() + " inport_number value cannot be negative", element);
-                            } else if (inflowMapping.inport_number() == -1 && asyncHandler != null) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Already has a AsyncHandler which not specified inPort number to listen all " +
-                                                "inPort data, so AsyncHandler cannot be duplication! Method: " + method, element);
-                            }
-
-                            if (inflowMapping.inport_number() != -1) {
-                                List<Integer> existInportNumbers = asyncHandlerInPortNum.get(handler);
-                                if (CollectionUtils.isEmpty(existInportNumbers)) {
-                                    existInportNumbers = new ArrayList<>(inflowMapping.inport_number());
+                            if (inflowMapping.portIndex() != -1) {
+                                List<Integer> existInportIndexes = asyncHandlerPortIndex.get(handler);
+                                if (CollectionUtils.isEmpty(existInportIndexes)) {
+                                    existInportIndexes = new ArrayList<>(inflowMapping.portIndex());
                                 }
-                                existInportNumbers.add(inflowMapping.inport_number());
-                                asyncHandlerInPortNum.put(handler, existInportNumbers);
+                                existInportIndexes.add(inflowMapping.portIndex());
+                                asyncHandlerPortIndex.put(handler, existInportIndexes);
                             }
 
                             asyncHandler = handler;
@@ -96,11 +91,6 @@ public class HandlerCompileValidator extends AbstractProcessor {
                             if (syncHandler != null) {
                                 processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                                         "Method: " + method + " @" + SyncInflowMapping.class.getSimpleName() + "  function cannot be duplication", element);
-                            }
-
-                            if (hasDuplicateOrNegative(syncInflowMapping.default_outport_numbers())) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @" + SyncInflowMapping.class.getSimpleName() + "  outport_numbers values cannot be duplication or negative", element);
                             }
 
                             syncHandler = handler;
@@ -120,7 +110,7 @@ public class HandlerCompileValidator extends AbstractProcessor {
         }
 
         String globalDuplication;
-        if ((globalDuplication = getGlobalInPortDuplication(asyncHandlerInPortNum)) != null) {
+        if ((globalDuplication = getGlobalInPortDuplication(asyncHandlerPortIndex)) != null) {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                     "handler Classes: " + globalDuplication + " cannot has duplication inport");
         }

@@ -7,7 +7,9 @@ public enum GlobalExceptionType {
     NoSuchInPortException(103, "no such inPort exception"),
     NoSuchOutPortException(104, "no such outPort exception"),
     NoSuchMethodException(105, "no such method exception"),
-    DuplicationHandlerException(106,"duplication handler exception");
+    DuplicationHandlerException(106,"duplication handler exception"),
+
+    IllegalStreamOperation(107, "subscriber existed, cannot use polling together!");
 
     private int code;
     private String message;

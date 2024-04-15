@@ -4,7 +4,6 @@ import com.xuelang.suanpan.annotation.InflowMapping;
 import com.xuelang.suanpan.annotation.StreamHandler;
 import com.xuelang.suanpan.annotation.SyncInflowMapping;
 import com.xuelang.suanpan.annotation.validator.HandlerRuntimeValidator;
-import com.xuelang.suanpan.common.entities.io.OutPort;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -63,26 +62,9 @@ public class HandlerScanner {
                         handlerMethodEntry.setMethod(method);
                         if (method.isAnnotationPresent(InflowMapping.class)) {
                             InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
-                            List<OutPort> defaultSpecifiedOutPorts = new ArrayList<>();
-                            for (int number : inflowMapping.default_outport_numbers()) {
-                                defaultSpecifiedOutPorts.add(ConstantConfiguration.getByOutPortNumber(number));
-                            }
-                            if (CollectionUtils.isEmpty(defaultSpecifiedOutPorts)){
-                                defaultSpecifiedOutPorts = ConstantConfiguration.getOutPorts();
-                            }
-                            handlerMethodEntry.setSpecifiedDefaultOutPorts(defaultSpecifiedOutPorts);
-                            registry.regist(ConstantConfiguration.getByInPortNumber(inflowMapping.inport_number()), handlerMethodEntry);
+                            registry.regist(ConstantConfiguration.getByInportIndex(inflowMapping.portIndex()), handlerMethodEntry);
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                         } else {
-                            SyncInflowMapping syncInflowMapping = method.getAnnotation(SyncInflowMapping.class);
-                            List<OutPort> defaultSpecifiedOutPorts = new ArrayList<>();
-                            for (int number : syncInflowMapping.default_outport_numbers()) {
-                                defaultSpecifiedOutPorts.add(ConstantConfiguration.getByOutPortNumber(number));
-                            }
-                            if (CollectionUtils.isEmpty(defaultSpecifiedOutPorts)){
-                                defaultSpecifiedOutPorts = ConstantConfiguration.getOutPorts();
-                            }
-                            handlerMethodEntry.setSpecifiedDefaultOutPorts(defaultSpecifiedOutPorts);
                             registry.regist(null, handlerMethodEntry);
                             log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                         }

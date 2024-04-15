@@ -4,7 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import com.xuelang.suanpan.common.entities.connection.Connection;
-import com.xuelang.suanpan.common.entities.io.OutPort;
+import com.xuelang.suanpan.common.entities.io.Outport;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -12,7 +12,7 @@ import java.util.*;
 
 public class MetaOutflowMessage {
     private MetaContext metaContext;
-    private Map<OutPort, Object> outPortDataMap;
+    private Map<Outport, Object> outPortDataMap;
     private boolean p2p = ConstantConfiguration.getEnableP2pSend();
     private String sendMasterQueue = ConstantConfiguration.getSendMasterQueue();
     private String nodeId = ConstantConfiguration.getNodeId();
@@ -27,11 +27,11 @@ public class MetaOutflowMessage {
         this.metaContext = metaContext;
     }
 
-    public Map<OutPort, Object> getOutPortDataMap() {
+    public Map<Outport, Object> getOutPortDataMap() {
         return outPortDataMap;
     }
 
-    public void setOutPortDataMap(Map<OutPort, Object> outPortDataMap) {
+    public void setOutPortDataMap(Map<Outport, Object> outPortDataMap) {
         this.outPortDataMap = outPortDataMap;
     }
 
@@ -51,7 +51,7 @@ public class MetaOutflowMessage {
         return approximateTrimming;
     }
 
-    public Object[] toMasterQueueData() {
+    public Object[] toStreamData() {
         List<Object> list = new ArrayList<>();
         if (StringUtils.isNotBlank(this.nodeId)) {
             list.add("node_id");

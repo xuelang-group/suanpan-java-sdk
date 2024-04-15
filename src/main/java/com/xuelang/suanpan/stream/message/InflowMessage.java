@@ -1,13 +1,13 @@
 package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSON;
-import com.xuelang.suanpan.common.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.Inport;
 
 import java.util.Map;
 
 public class InflowMessage {
     private Context context;
-    private Map<InPort, Object> data;
+    private Map<Inport, Object> data;
 
     public Context getContext() {
         return context;
@@ -22,7 +22,7 @@ public class InflowMessage {
         return data;
     }
 
-    public void setData(Map<InPort, Object> data) {
+    public void setData(Map<Inport, Object> data) {
         this.data = data;
     }
 

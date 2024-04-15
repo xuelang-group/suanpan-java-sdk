@@ -2,12 +2,9 @@ package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.common.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.Inport;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -28,9 +25,12 @@ public class MqMessage {
      */
     private List<MetaInflowMessage> metaInflowMessages;
 
-    public MqMessage(String queue, List<MetaInflowMessage> metaInflowMessages) {
+    private List<String> messageIds;
+
+    public MqMessage(String queue, List<MetaInflowMessage> metaInflowMessages, List<String> messageIds) {
         this.queue = queue;
         this.metaInflowMessages = metaInflowMessages;
+        this.messageIds = messageIds;
     }
 
     public String getQueue() {
@@ -41,8 +41,13 @@ public class MqMessage {
         return metaInflowMessages;
     }
 
-    private static void parseMessage(List metaMessageList, List<MetaInflowMessage> metaInflowMessages) {
+    public List<String> getMessageIds() {
+        return messageIds;
+    }
+
+    private static void parseMessage(List metaMessageList, List<MetaInflowMessage> metaInflowMessages, List<String> messageIds) {
         String messageId = (String) metaMessageList.get(0);
+        messageIds.add(messageId);
         Map<String, Object> tmpContentMap = new HashMap<>();
         List contentList = (List) metaMessageList.get(1);
         for (int i = 0; i < contentList.size() - 1; i += 2) {
@@ -82,7 +87,7 @@ public class MqMessage {
         metaInflowMessage.setMetaContext(metaContext);
 
         tmpContentMap.keySet().stream().forEach(key -> {
-            InPort inPort;
+            Inport inPort;
             if ((inPort = ConstantConfiguration.getByInPortUuid(key)) != null) {
                 metaInflowMessage.append(inPort, tmpContentMap.get(key));
             }
@@ -124,11 +129,12 @@ public class MqMessage {
     public static MqMessage convert(List metaMsg) {
         String queue = (String) metaMsg.get(0);
         List<MetaInflowMessage> metaInflowMessages = new ArrayList<>();
+        List<String> messageIds = new ArrayList<>();
 
         List metaMessageList = (List) metaMsg.get(1);
         metaMessageList.forEach(metaMessage -> {
-            parseMessage((List) metaMessage, metaInflowMessages);
+            parseMessage((List) metaMessage, metaInflowMessages, messageIds);
         });
-        return new MqMessage(queue, metaInflowMessages);
+        return new MqMessage(queue, metaInflowMessages, messageIds);
     }
 }

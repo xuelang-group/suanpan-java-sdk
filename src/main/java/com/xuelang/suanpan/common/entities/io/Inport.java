@@ -5,30 +5,30 @@ import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import org.apache.commons.lang3.StringUtils;
 
-public class InPort extends BasePort {
+public class Inport extends BasePort {
 
-    private InPort(){
+    private Inport(){
     }
-    public static InPort bind(Integer inPortNumber) throws StreamGlobalException {
-        String key = "in" + inPortNumber;
-        InPort inPort = ConstantConfiguration.getByInPortUuid(key);
-        if (inPort == null){
+    public static Inport bind(Integer inportIndex) throws StreamGlobalException {
+        String key = "in" + inportIndex;
+        Inport inport = ConstantConfiguration.getByInPortUuid(key);
+        if (inport == null){
             throw new StreamGlobalException(GlobalExceptionType.NoSuchInPortException);
         }
 
-        return inPort;
+        return inport;
     }
 
-    public static InPort bind(String inPortUUID) throws StreamGlobalException {
+    public static Inport bind(String inPortUUID) throws StreamGlobalException {
         if (StringUtils.isBlank(inPortUUID)){
             return null;
         }
-        InPort inPort = ConstantConfiguration.getByInPortUuid(inPortUUID);
-        if (inPort == null){
+        Inport inport = ConstantConfiguration.getByInPortUuid(inPortUUID);
+        if (inport == null){
             throw new StreamGlobalException(GlobalExceptionType.NoSuchInPortException);
         }
 
-        return inPort;
+        return inport;
     }
 
 }

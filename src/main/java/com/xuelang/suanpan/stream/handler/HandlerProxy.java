@@ -1,7 +1,7 @@
 package com.xuelang.suanpan.stream.handler;
 
 import com.alibaba.fastjson2.JSON;
-import com.xuelang.suanpan.common.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.Inport;
 import com.xuelang.suanpan.common.exception.*;
 import com.xuelang.suanpan.stream.message.InflowMessage;
 import com.xuelang.suanpan.stream.message.OutflowMessage;
@@ -26,9 +26,9 @@ public class HandlerProxy {
             throw new StreamGlobalException(GlobalExceptionType.IllegalStreamMessage);
         }
 
-        InPort firstInPort = metaInflowMessage.getInPortDataMap().keySet().stream().findFirst().get();
+        Inport firstInport = metaInflowMessage.getInPortDataMap().keySet().stream().findFirst().get();
         HandlerMethodEntry handlerMethodEntry;
-        if ((handlerMethodEntry = registry.get(firstInPort)) == null) {
+        if ((handlerMethodEntry = registry.get(firstInport)) == null) {
             // TODO: 2024/3/12 发送事件到平台
             throw new StreamGlobalException(GlobalExceptionType.NoSuchHandlerException);
         }
@@ -41,7 +41,6 @@ public class HandlerProxy {
             if (outflowMessage == null) {
                 return null;
             }
-            outflowMessage.mergeOutPortData(handlerMethodEntry.getSpecifiedDefaultOutPorts());
         } catch (IllegalAccessException e) {
             log.error("invoke suanpan handler error", e);
             throw new StreamGlobalException(GlobalExceptionType.InvocationHandlerException, e);

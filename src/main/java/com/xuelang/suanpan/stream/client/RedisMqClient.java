@@ -1,6 +1,7 @@
 package com.xuelang.suanpan.stream.client;
 
 import com.alibaba.fastjson2.JSON;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.common.pool.ThreadPool;
 import com.xuelang.suanpan.common.utils.SerializeUtil;
@@ -26,13 +27,12 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class RedisMqClient extends AbstractMqClient {
@@ -48,7 +48,7 @@ public class RedisMqClient extends AbstractMqClient {
     /**
      * 单次消费条数，默认消费一条
      */
-    private long count = 1L;
+    private long defaultOnceConsumeCount = 1L;
     /**
      * 是否无ACK，默认false
      */
@@ -65,58 +65,44 @@ public class RedisMqClient extends AbstractMqClient {
      * 阻塞消费失败后，重新消费延时时间，单位毫秒
      */
     private long restartDelay = 1000L;
-    private volatile boolean isPolling;
-    private volatile InflowMessage inflowMessage;
+    private static final Lock pollingLock = new ReentrantLock();
     private final RedisClient client;
     private final StatefulRedisConnection<String, String> consumeConnection;
     private final StatefulRedisConnection<String, String> sendConnection;
-    private static final Lock lock = new ReentrantLock();
-    private static final Condition pollingAvailableCondition = lock.newCondition();
-    private static final Lock consumeLock = new ReentrantLock();
-    private static final Condition readyConsumeCondition = consumeLock.newCondition();
+    private final ConsumeWorker consumeWorker;
 
-
-    public void setGroup(String group) {
-        this.group = group;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setCount(long count) {
-        this.count = count;
-    }
-
-    public void setNoAck(boolean noAck) {
-        this.noAck = noAck;
-    }
-
-    public void setQueue(String queue) {
-        this.queue = queue;
-    }
-
-    public void setConsumedMessageId(String consumedMessageId) {
-        this.consumedMessageId = consumedMessageId;
-    }
 
     public void setRestartDelay(long restartDelay) {
         this.restartDelay = restartDelay;
     }
 
-    public RedisMqClient(HandlerProxy proxy) {
+    public RedisMqClient(HandlerProxy proxy, String queue, String group, String consumedMsgId, boolean isNoAck, Long restartDelay) {
+        this.queue = queue;
+        this.noAck = isNoAck;
+        if (StringUtils.isNotBlank(group)) {
+            this.group = group;
+        }
+        if (StringUtils.isNotBlank(consumedMsgId)) {
+            this.consumedMessageId = consumedMsgId;
+        }
+        if (restartDelay != null) {
+            this.restartDelay = restartDelay;
+        }
+
         RedisURI uri = RedisURI.Builder.redis(ConstantConfiguration.getStreamHost(), ConstantConfiguration.getStreamPort()).build();
         this.client = RedisClient.create(uri);
         this.client.setOptions(ClientOptions.builder().autoReconnect(true).pingBeforeActivateConnection(true).build());
         this.consumeConnection = this.client.connect();
         this.sendConnection = this.client.connect();
         this.proxy = proxy;
+        createConsumerGroup();
+        this.consumeWorker = new ConsumeWorker(createCmdArgs(name, 0,defaultOnceConsumeCount), proxy);
     }
 
-    public void initConsumerGroup() {
+    public void createConsumerGroup() {
         CommandArgs<String, String> args = new CommandArgs<>(StringCodec.UTF8)
                 .add(CommandKeyword.CREATE)
-                .add(queue)
+                .add(this.queue)
                 .add(group)
                 .add("0")
                 .add("MKSTREAM");
@@ -149,41 +135,64 @@ public class RedisMqClient extends AbstractMqClient {
     }
 
     @Override
-    public InflowMessage polling(long timeoutMillis) {
-        lock.lock();
-        inflowMessage = null;
-        isPolling = true;
+    public List<InflowMessage> polling(int count, long timeoutMillis) throws StreamGlobalException {
+        long start = System.currentTimeMillis();
         try {
-            pollingAvailableCondition.await(timeoutMillis, TimeUnit.MILLISECONDS);
-            isPolling = false;
-            log.info("polled message:{}", inflowMessage.toString());
+            if (pollingLock.tryLock(timeoutMillis, TimeUnit.MILLISECONDS)) {
+                consumeWorker.pause();
+                long blockMillis = timeoutMillis - (System.currentTimeMillis() - start);
+                List<Object> consumedObjects;
+                RedisFuture<List<Object>> future = null;
+                log.info("start polling message operation");
+                try {
+                    future = consumeConnection.async().dispatch(CommandType.XREADGROUP,
+                            new NestedMultiOutput<>(StringCodec.UTF8), createCmdArgs(name, blockMillis, count));
+                    consumedObjects = future.get(blockMillis, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException | ExecutionException e) {
+                    log.error("polling message from mq error", e);
+                    return null;
+                } catch (TimeoutException e) {
+                    log.error("polling message from mq timeout", e);
+                    return null;
+                } finally {
+                    log.info("finish polling message operation");
+                    pollingLock.unlock();
+                    consumeWorker.resume();
+                }
+
+                MqMessage mqMessage = MqMessage.convert((List) consumedObjects.get(0));
+                acks(queue, group, mqMessage.getMessageIds().toArray(new String[0]));
+                List<MetaInflowMessage> metaInflowMessages = mqMessage.getMessages();
+                if (CollectionUtils.isEmpty(metaInflowMessages)) {
+                    log.warn("consume message from mq is empty");
+                    return null;
+                }
+
+                return metaInflowMessages.stream().map(metaInflowMessage -> {
+                    if (metaInflowMessage.isExpired()) {
+                        log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
+                        return null;
+                    }
+
+                    if (metaInflowMessage.isEmpty()) {
+                        log.info("message has no inPort data, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
+                        return null;
+                    }
+
+                    return metaInflowMessage.covert();
+                }).collect(Collectors.toList());
+            }
         } catch (InterruptedException e) {
-            log.error("polling mq message failed!");
-        } finally {
-            lock.unlock();
-            return inflowMessage;
+            log.error("polling message error, " + e.getMessage(), e);
         }
+
+        return null;
     }
 
     @Override
-    public void infiniteConsume() {
-        CommandArgs<String, String> consumeArgs = new CommandArgs<>(StringCodec.UTF8)
-                .add(CommandKeyword.GROUP).add(this.group)
-                .add(this.name)
-                //block时间设置为0，则一直保持阻塞
-                .add(CommandKeyword.BLOCK).add(0)
-                .add(CommandKeyword.COUNT).add(this.count)
-                .add("STREAMS").add(this.queue)
-                .add(this.consumedMessageId);
-        if (this.noAck) {
-            consumeArgs.add(CommandKeyword.NOACK);
-        }
-
-        Thread consumerThread = new Thread(new InfiniteConsumeTask(consumeArgs, proxy));
-        consumerThread.setName("consumer_thread");
-        consumerThread.start();
+    public void consume() {
+        consumeWorker.start();
     }
-
 
     @Override
     public String publish(MetaOutflowMessage metaOutflowMessage) {
@@ -210,7 +219,7 @@ public class RedisMqClient extends AbstractMqClient {
 
             return publishResults.toString();
         } else {
-            Object[] outData = metaOutflowMessage.toMasterQueueData();
+            Object[] outData = metaOutflowMessage.toStreamData();
             RedisFuture<String> future = this.sendConnection.async().xadd(metaOutflowMessage.getSendMasterQueue(), addArgs, outData);
             try {
                 return future.get();
@@ -232,95 +241,31 @@ public class RedisMqClient extends AbstractMqClient {
         }
     }
 
-    @Override
-    public void readyConsume() {
-        consumeLock.lock();
+    private void acks(String queue, String group, String[] messageIds) {
+        RedisFuture<Long> xack = this.sendConnection.async().xack(queue, group, messageIds);
         try {
-            readyConsumeCondition.signal();
-        } finally {
-            consumeLock.unlock();
+            xack.get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("xack to MQ error", e);
         }
     }
 
-
-    private class InfiniteConsumeTask implements Runnable {
-        final HandlerProxy proxy;
-        final CommandArgs<String, String> args;
-
-        public InfiniteConsumeTask(CommandArgs<String, String> args, HandlerProxy proxy) {
-            this.proxy = proxy;
-            this.args = args;
+    private CommandArgs<String, String> createCmdArgs(String consumerName, long blockMillis, long count) {
+        CommandArgs<String, String> consumeArgs = new CommandArgs<>(StringCodec.UTF8)
+                .add(CommandKeyword.GROUP).add(group)
+                .add(consumerName)
+                //block时间设置为0，则一直保持阻塞
+                .add(CommandKeyword.BLOCK).add(blockMillis)
+                .add(CommandKeyword.COUNT).add(count)
+                .add("STREAMS").add(queue)
+                .add(this.consumedMessageId);
+        if (this.noAck) {
+            consumeArgs.add(CommandKeyword.NOACK);
         }
 
-        @Override
-        public void run() throws RuntimeException {
-            consumeLock.lock();
-            try {
-                readyConsumeCondition.await();
-                log.info("suanpan sdk start consuming mq msg ...");
-            } catch (InterruptedException e) {
-                log.error("wait to consume mq message error", e);
-            } finally {
-                consumeLock.unlock();
-            }
-
-            while (true) {
-                RedisFuture<List<Object>> future = consumeConnection.async().dispatch(CommandType.XREADGROUP, new NestedMultiOutput<>(StringCodec.UTF8), args);
-                MqMessage mqMessage;
-                try {
-                    List<Object> consumedObjects = future.get();
-                    mqMessage = MqMessage.convert((List) consumedObjects.get(0));
-                } catch (InterruptedException | ExecutionException e) {
-                    // TODO: 2024/3/13   发送消费异常事件
-                    log.error("consume message from mq error", e);
-                    LockSupport.parkNanos(restartDelay * 1000000);
-                    continue;
-                }
-
-                List<MetaInflowMessage> metaInflowMessages = mqMessage.getMessages();
-                if (CollectionUtils.isEmpty(metaInflowMessages)) {
-                    log.warn("consume message from mq is empty");
-                    continue;
-                }
-
-                metaInflowMessages.stream().forEach(metaInflowMessage -> {
-                    ack(queue, group, metaInflowMessage.getMetaContext().getMessageId());
-                    if (metaInflowMessage.isExpired()) {
-                        log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
-                        return;
-                    }
-
-                    if (metaInflowMessage.isEmpty()) {
-                        log.info("message has no inPort data, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
-                        return;
-                    }
-
-                    if (isPolling) {
-                        lock.lock();
-                        try {
-                            inflowMessage = metaInflowMessage.covert();
-                            pollingAvailableCondition.signal();
-                        } finally {
-                            lock.unlock();
-                        }
-                    }
-
-                    InvokeHandlerTask invokeHandlerTask = new InvokeHandlerTask(metaInflowMessage);
-                    try {
-                        ThreadPool.pool().submit(invokeHandlerTask);
-                    } catch (RejectedExecutionException e) {
-                        try {
-                            log.warn("consume stream message too fast and invoke too late, need wait a moment to" +
-                                    " consume message and submit invoke task!");
-                            ThreadPool.pool().getQueue().put(invokeHandlerTask);
-                        } catch (InterruptedException ex) {
-                            log.error("wait a moment to consume message and submit invoke task", e);
-                        }
-                    }
-                });
-            }
-        }
+        return consumeArgs;
     }
+
 
     private class InvokeHandlerTask implements Runnable {
         private final MetaInflowMessage metaInflowMessage;
@@ -341,4 +286,99 @@ public class RedisMqClient extends AbstractMqClient {
             }
         }
     }
+
+    private class ConsumeWorker implements Runnable {
+        private final HandlerProxy proxy;
+        private final CommandArgs<String, String> commandArgs;
+        //0:停止, 1:运行, 2:暂停
+        private AtomicInteger consumeStatus = new AtomicInteger(0);
+        private RedisFuture<List<Object>> future;
+        private final ThreadPoolExecutor singleThreadPoolExecutor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(1), new ThreadFactoryBuilder().setNameFormat("single-pool-%d").build(),
+                new ThreadPoolExecutor.DiscardPolicy());
+
+        public ConsumeWorker(CommandArgs<String, String> commandArgs, HandlerProxy proxy) {
+            this.proxy = proxy;
+            this.commandArgs = commandArgs;
+        }
+
+        @Override
+        public void run() throws RuntimeException {
+            while (consumeStatus.get() == 1) {
+                log.info("do fixed consume task");
+                List<Object> consumedObjects;
+                try {
+                    future = consumeConnection.async().dispatch(CommandType.XREADGROUP, new NestedMultiOutput<>(StringCodec.UTF8), commandArgs);
+                    consumedObjects = future.get();
+                    log.info("fixed consume task consumed message:{}", JSON.toJSONString(consumedObjects.get(0)));
+                } catch (InterruptedException | ExecutionException e) {
+                    log.error("consume message from mq error", e);
+                    LockSupport.parkNanos(restartDelay * 1000000);
+                    continue;
+                }
+
+                MqMessage mqMessage = MqMessage.convert((List) consumedObjects.get(0));
+                acks(queue, group, mqMessage.getMessageIds().toArray(new String[0]));
+
+                List<MetaInflowMessage> metaInflowMessages = mqMessage.getMessages();
+                if (CollectionUtils.isEmpty(metaInflowMessages)) {
+                    log.warn("consume message from mq is empty");
+                    continue;
+                }
+
+                metaInflowMessages.stream().forEach(metaInflowMessage -> {
+                    ack(queue, group, metaInflowMessage.getMetaContext().getMessageId());
+                    if (metaInflowMessage.isExpired()) {
+                        log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
+                        return;
+                    }
+
+                    if (metaInflowMessage.isEmpty()) {
+                        log.info("message has no inPort data, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
+                        return;
+                    }
+
+                    RedisMqClient.InvokeHandlerTask invokeHandlerTask = new RedisMqClient.InvokeHandlerTask(metaInflowMessage);
+                    try {
+                        ThreadPool.pool().submit(invokeHandlerTask);
+                    } catch (RejectedExecutionException e) {
+                        try {
+                            log.warn("consume stream message too fast and invoke too late, need wait a moment to" +
+                                    " consume message and submit invoke task!");
+                            ThreadPool.pool().getQueue().put(invokeHandlerTask);
+                        } catch (InterruptedException ex) {
+                            log.error("wait a moment to consume message and submit invoke task", e);
+                        }
+                    }
+                });
+            }
+        }
+
+        public void pause() {
+            if (consumeStatus.compareAndSet(1, 2)) {
+                if (future != null) {
+                    future.cancel(true);
+                    log.info("pause fixed consume task");
+                }
+
+                singleThreadPoolExecutor.shutdownNow();
+            }
+        }
+
+        public void start() {
+            if (consumeStatus.compareAndSet(0, 1)) {
+                log.info("start fixed consume task");
+                singleThreadPoolExecutor.submit(this);
+            }
+        }
+
+        public void resume() {
+            if (consumeStatus.compareAndSet(2, 1)) {
+                log.info("resume fixed consume task");
+                singleThreadPoolExecutor.submit(this);
+            }
+        }
+    }
 }
+
+

@@ -1,7 +1,7 @@
 package com.xuelang.suanpan.stream.handler;
 
 import com.alibaba.fastjson2.JSON;
-import com.xuelang.suanpan.common.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.Inport;
 import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
@@ -19,7 +19,7 @@ public class HandlerRegistry {
     /**
      * 指定输入端口的handler
      */
-    private Map<InPort, HandlerMethodEntry> methodEntryMap;
+    private Map<Inport, HandlerMethodEntry> methodEntryMap;
 
     /**
      * 优先级最好的handler
@@ -42,31 +42,25 @@ public class HandlerRegistry {
         methodEntryMap = new HashMap<>();
     }
 
-    public synchronized void regist(@Nullable InPort inPort, HandlerMethodEntry entry) throws StreamGlobalException {
+    public synchronized void regist(@Nullable Inport inport, HandlerMethodEntry entry) throws StreamGlobalException {
         if (globalMethodEntry != null) {
             throw new StreamGlobalException(GlobalExceptionType.DuplicationHandlerException);
         }
 
-        if (inPort == null) {
+        if (inport == null) {
             log.info("regist global handler method entry:{}", JSON.toJSONString(entry));
             globalMethodEntry = entry;
-            if (CollectionUtils.isEmpty(globalMethodEntry.getSpecifiedDefaultOutPorts())){
-                globalMethodEntry.setSpecifiedDefaultOutPorts(ConstantConfiguration.getOutPorts());
-            }
         } else {
-            if (methodEntryMap.containsKey(inPort)) {
+            if (methodEntryMap.containsKey(inport)) {
                 throw new StreamGlobalException(GlobalExceptionType.DuplicationHandlerException);
             }
 
-            if (CollectionUtils.isEmpty(entry.getSpecifiedDefaultOutPorts())){
-                entry.setSpecifiedDefaultOutPorts(ConstantConfiguration.getOutPorts());
-            }
-            methodEntryMap.put(inPort, entry);
-            log.info("inPort:{}, register handler:{}, method:{}", inPort.getUuid(), entry.getInstance().getClass().getName(), entry.getMethod().getName());
+            methodEntryMap.put(inport, entry);
+            log.info("inport:{}, register handler:{}, method:{}", inport.getUuid(), entry.getInstance().getClass().getName(), entry.getMethod().getName());
         }
     }
 
-    public HandlerMethodEntry get(InPort inPort) {
+    public HandlerMethodEntry get(Inport inPort) {
         if (globalMethodEntry != null) {
             return globalMethodEntry;
         }

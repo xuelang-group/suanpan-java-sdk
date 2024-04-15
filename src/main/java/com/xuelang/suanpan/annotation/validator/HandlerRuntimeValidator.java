@@ -22,10 +22,9 @@ public class HandlerRuntimeValidator {
     private static Map<Integer, Integer> globalAsyncInPortHandler = new ConcurrentHashMap<>();
 
     public static void validateHandlerPortValues(Class<?> clazz) throws RuntimeException {
-        int inPortMaxNumber = ConstantConfiguration.getMaxInPortNumber();
-        int outPortMaxNumber = ConstantConfiguration.getMaxOutPortNumber();
+        int inportMaxIndex = ConstantConfiguration.getInportMaxIndex();
 
-        if (inPortMaxNumber <= 0) {
+        if (inportMaxIndex <= 0) {
             throw new RuntimeException("the node has no inport, can not define a suanpan handler use " + InflowMapping.class.getSimpleName() + " handler, Clazz: "
                     + clazz.getName());
         }
@@ -43,23 +42,21 @@ public class HandlerRuntimeValidator {
 
                 validate(clazz, method);
                 InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
-                if (inflowMapping.inport_number() != -1 &&
-                        (inflowMapping.inport_number() > inPortMaxNumber || inflowMapping.inport_number() <= 0)) {
+                if (inflowMapping.portIndex() != -1 &&
+                        (inflowMapping.portIndex() > inportMaxIndex || inflowMapping.portIndex() <= 0)) {
                     throw new RuntimeException(InflowMapping.class.getSimpleName() + " illegal scope inport value set, " +
-                            "cannot be negative value or bigger than inport number max value: " + inPortMaxNumber + ", Clazz: "
+                            "cannot be negative value or bigger than port index max value: " + inportMaxIndex + ", Clazz: "
                             + clazz.getName() + ", Method: " + method.getName());
                 }
 
-                if (inflowMapping.inport_number() != -1) {
-                    if (globalAsyncInPortHandler.containsKey(inflowMapping.inport_number())) {
-                        throw new RuntimeException("async handler method cannot has duplication inPort number " + InflowMapping.class.getSimpleName() + " handler, Clazz: "
+                if (inflowMapping.portIndex() != -1) {
+                    if (globalAsyncInPortHandler.containsKey(inflowMapping.portIndex())) {
+                        throw new RuntimeException("async handler method cannot has duplication port index " + InflowMapping.class.getSimpleName() + " handler, Clazz: "
                                 + clazz.getName() + ", Method: " + method.getName());
                     } else {
-                        globalAsyncInPortHandler.put(inflowMapping.inport_number(), inflowMapping.inport_number());
+                        globalAsyncInPortHandler.put(inflowMapping.portIndex(), inflowMapping.portIndex());
                     }
                 }
-
-                checkOutPortValues(inflowMapping.default_outport_numbers(), outPortMaxNumber, clazz, method);
             }
 
             if (method.isAnnotationPresent(SyncInflowMapping.class)) {
@@ -74,9 +71,6 @@ public class HandlerRuntimeValidator {
                 }
 
                 validate(clazz, method);
-
-                SyncInflowMapping syncInflowMapping = method.getAnnotation(SyncInflowMapping.class);
-                checkOutPortValues(syncInflowMapping.default_outport_numbers(), outPortMaxNumber, clazz, method);
                 existSyncHandler = true;
             }
         });
@@ -97,18 +91,6 @@ public class HandlerRuntimeValidator {
             throw new RuntimeException("Handler: " + clazz.getName() + " Method: " + method.getName() + " parameter must be set " + InflowMessage.class.getName());
         } else if (!((Class) params.get(0)).getName().equals(InflowMessage.class.getName())) {
             throw new RuntimeException("Handler: " + clazz.getName() + " Method: " + method.getName() + " parameter must be set " + InflowMessage.class.getName());
-        }
-    }
-
-    private static void checkOutPortValues(int[] defaultOutPortNumbers, int outPortMaxNumber, Class<?> clazz, Method method) {
-        if (outPortMaxNumber <= 0 && (defaultOutPortNumbers != null && defaultOutPortNumbers.length > 0)) {
-            throw new RuntimeException("node has no outPort, cannot set " + InflowMapping.class.getSimpleName() + " outport value , Clazz: "
-                    + clazz.getName() + ", Method: " + method.getName());
-        }
-
-        if ((defaultOutPortNumbers != null && defaultOutPortNumbers.length > 0) && Arrays.stream(defaultOutPortNumbers).anyMatch(number -> (number > outPortMaxNumber || number < 0))) {
-            throw new RuntimeException(InflowMapping.class.getSimpleName() + " illegal scope outport value set, cannot be negative value or bigger than outport number max value: " + outPortMaxNumber + ", Clazz: "
-                    + clazz.getName() + ", Method: " + method.getName());
         }
     }
 }

@@ -6,6 +6,7 @@ import com.xuelang.suanpan.stream.message.Context;
 import com.xuelang.suanpan.stream.message.InflowMessage;
 import com.xuelang.suanpan.stream.message.OutflowMessage;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public interface IStream {
@@ -26,6 +27,15 @@ public interface IStream {
      * @return 轮询到的算盘handler请求
      */
     InflowMessage polling(long timeoutMillis);
+
+
+    /**
+     * 主动轮询多条流消息
+     * @param count 条数
+     * @param timeoutMillis 超时毫秒数
+     * @return
+     */
+    List<InflowMessage> polling(int count, long timeoutMillis);
 
     /**
      * 订阅输入端口数据

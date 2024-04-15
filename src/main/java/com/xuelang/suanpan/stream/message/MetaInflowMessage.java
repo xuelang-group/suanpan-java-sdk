@@ -1,6 +1,6 @@
 package com.xuelang.suanpan.stream.message;
 
-import com.xuelang.suanpan.common.entities.io.InPort;
+import com.xuelang.suanpan.common.entities.io.Inport;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -9,7 +9,7 @@ import java.util.Map;
 @Slf4j
 public class MetaInflowMessage {
     private MetaContext metaContext;
-    private Map<InPort, Object> inPortDataMap = new HashMap<>();
+    private Map<Inport, Object> inPortDataMap = new HashMap<>();
 
     public MetaContext getMetaContext() {
         return metaContext;
@@ -19,11 +19,11 @@ public class MetaInflowMessage {
         this.metaContext = metaContext;
     }
 
-    public Map<InPort, Object> getInPortDataMap() {
+    public Map<Inport, Object> getInPortDataMap() {
         return inPortDataMap;
     }
 
-    public void append(InPort inPort, Object value) {
+    public void append(Inport inPort, Object value) {
         inPortDataMap.put(inPort, value);
     }
 

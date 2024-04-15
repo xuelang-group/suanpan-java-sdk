@@ -1,13 +1,14 @@
 package com.xuelang.suanpan.stream.handler;
 
-import com.xuelang.suanpan.common.entities.io.OutPort;
+import com.xuelang.suanpan.common.entities.io.Outport;
+import com.xuelang.suanpan.configuration.ConstantConfiguration;
+
 import java.lang.reflect.Method;
-import java.util.List;
 
 public class HandlerMethodEntry<T> {
     private T instance;
     private Method method;
-    private List<OutPort> specifiedDefaultOutPorts;
+    private final Outport defaultOutport = ConstantConfiguration.getByOutportIndex(1);
 
     public T getInstance() {
         return instance;
@@ -25,11 +26,7 @@ public class HandlerMethodEntry<T> {
         this.method = method;
     }
 
-    public List<OutPort> getSpecifiedDefaultOutPorts() {
-        return specifiedDefaultOutPorts;
-    }
-
-    public void setSpecifiedDefaultOutPorts(List<OutPort> specifiedDefaultOutPorts) {
-        this.specifiedDefaultOutPorts = specifiedDefaultOutPorts;
+    public Outport getDefaultOutPort() {
+        return defaultOutport;
     }
 }

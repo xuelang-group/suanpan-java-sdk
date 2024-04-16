@@ -70,7 +70,7 @@ public class RedisMqClient extends AbstractMqClient {
     private final RedisClient client;
     private final StatefulRedisConnection<String, String> consumeConnection;
     private final StatefulRedisConnection<String, String> sendConnection;
-    private final ConsumeWorker consumeWorker;
+    private final SubscriberConsumeWorker subscriberConsumeWorker;
 
 
     public void setRestartDelay(long restartDelay) {
@@ -90,14 +90,14 @@ public class RedisMqClient extends AbstractMqClient {
             this.restartDelay = restartDelay;
         }
 
-        RedisURI uri = RedisURI.Builder.redis(ConstantConfiguration.getStreamHost(), ConstantConfiguration.getStreamPort()).withPassword("123456").build();
+        RedisURI uri = RedisURI.Builder.redis(ConstantConfiguration.getStreamHost(), ConstantConfiguration.getStreamPort()).build();
         this.client = RedisClient.create(uri);
         this.client.setOptions(ClientOptions.builder().autoReconnect(true).pingBeforeActivateConnection(true).build());
         this.consumeConnection = this.client.connect();
         this.sendConnection = this.client.connect();
         this.proxy = proxy;
         createConsumerGroup();
-        this.consumeWorker = new ConsumeWorker(createCmdArgs(name, 0, defaultOnceConsumeCount), proxy);
+        this.subscriberConsumeWorker = new SubscriberConsumeWorker(createCmdArgs(name, 0, defaultOnceConsumeCount), proxy);
     }
 
     public void createConsumerGroup() {
@@ -137,7 +137,7 @@ public class RedisMqClient extends AbstractMqClient {
 
     @Override
     public List<InflowMessage> polling(int count, long timeoutMillis) throws StreamGlobalException {
-        if (consumeWorker.consumeStatus.get() == 1){
+        if (subscriberConsumeWorker.consumeStatus.get() == 1){
             throw new StreamGlobalException(GlobalExceptionType.IllegalStreamOperation);
         }
 
@@ -194,7 +194,7 @@ public class RedisMqClient extends AbstractMqClient {
 
     @Override
     public void consume() {
-        consumeWorker.start();
+        subscriberConsumeWorker.start();
     }
 
     @Override
@@ -290,7 +290,7 @@ public class RedisMqClient extends AbstractMqClient {
         }
     }
 
-    private class ConsumeWorker implements Runnable {
+    private class SubscriberConsumeWorker implements Runnable {
         private final HandlerProxy proxy;
         private final CommandArgs<String, String> commandArgs;
         //0:停止, 1:运行, 2:暂停
@@ -300,7 +300,7 @@ public class RedisMqClient extends AbstractMqClient {
                 new LinkedBlockingQueue<>(1), new ThreadFactoryBuilder().setNameFormat("single-pool-%d").build(),
                 new ThreadPoolExecutor.DiscardPolicy());
 
-        public ConsumeWorker(CommandArgs<String, String> commandArgs, HandlerProxy proxy) {
+        public SubscriberConsumeWorker(CommandArgs<String, String> commandArgs, HandlerProxy proxy) {
             this.proxy = proxy;
             this.commandArgs = commandArgs;
         }

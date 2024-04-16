@@ -2,6 +2,7 @@ package com.xuelang.suanpan.stream.client;
 
 import com.alibaba.fastjson2.JSON;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.common.pool.ThreadPool;
 import com.xuelang.suanpan.common.utils.SerializeUtil;
@@ -89,14 +90,14 @@ public class RedisMqClient extends AbstractMqClient {
             this.restartDelay = restartDelay;
         }
 
-        RedisURI uri = RedisURI.Builder.redis(ConstantConfiguration.getStreamHost(), ConstantConfiguration.getStreamPort()).build();
+        RedisURI uri = RedisURI.Builder.redis(ConstantConfiguration.getStreamHost(), ConstantConfiguration.getStreamPort()).withPassword("123456").build();
         this.client = RedisClient.create(uri);
         this.client.setOptions(ClientOptions.builder().autoReconnect(true).pingBeforeActivateConnection(true).build());
         this.consumeConnection = this.client.connect();
         this.sendConnection = this.client.connect();
         this.proxy = proxy;
         createConsumerGroup();
-        this.consumeWorker = new ConsumeWorker(createCmdArgs(name, 0,defaultOnceConsumeCount), proxy);
+        this.consumeWorker = new ConsumeWorker(createCmdArgs(name, 0, defaultOnceConsumeCount), proxy);
     }
 
     public void createConsumerGroup() {
@@ -136,10 +137,13 @@ public class RedisMqClient extends AbstractMqClient {
 
     @Override
     public List<InflowMessage> polling(int count, long timeoutMillis) throws StreamGlobalException {
+        if (consumeWorker.consumeStatus.get() == 1){
+            throw new StreamGlobalException(GlobalExceptionType.IllegalStreamOperation);
+        }
+
         long start = System.currentTimeMillis();
         try {
             if (pollingLock.tryLock(timeoutMillis, TimeUnit.MILLISECONDS)) {
-                consumeWorker.pause();
                 long blockMillis = timeoutMillis - (System.currentTimeMillis() - start);
                 List<Object> consumedObjects;
                 RedisFuture<List<Object>> future = null;
@@ -157,7 +161,6 @@ public class RedisMqClient extends AbstractMqClient {
                 } finally {
                     log.info("finish polling message operation");
                     pollingLock.unlock();
-                    consumeWorker.resume();
                 }
 
                 MqMessage mqMessage = MqMessage.convert((List) consumedObjects.get(0));
@@ -354,14 +357,20 @@ public class RedisMqClient extends AbstractMqClient {
             }
         }
 
-        public void pause() {
+        public synchronized void pause() {
             if (consumeStatus.compareAndSet(1, 2)) {
                 if (future != null) {
                     future.cancel(true);
                     log.info("pause fixed consume task");
                 }
 
-                singleThreadPoolExecutor.shutdownNow();
+
+                try {
+                    singleThreadPoolExecutor.wait();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
             }
         }
 
@@ -372,10 +381,10 @@ public class RedisMqClient extends AbstractMqClient {
             }
         }
 
-        public void resume() {
+        public synchronized void resume() {
             if (consumeStatus.compareAndSet(2, 1)) {
                 log.info("resume fixed consume task");
-                singleThreadPoolExecutor.submit(this);
+                singleThreadPoolExecutor.notify();
             }
         }
     }

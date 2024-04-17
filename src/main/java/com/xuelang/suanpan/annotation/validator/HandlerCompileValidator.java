@@ -2,7 +2,6 @@ package com.xuelang.suanpan.annotation.validator;
 
 import com.xuelang.suanpan.annotation.InflowMapping;
 import com.xuelang.suanpan.annotation.StreamHandler;
-import com.xuelang.suanpan.annotation.SyncInflowMapping;
 import com.xuelang.suanpan.stream.message.InflowMessage;
 import com.xuelang.suanpan.stream.message.OutflowMessage;
 import org.apache.commons.collections4.CollectionUtils;
@@ -22,9 +21,8 @@ import java.util.stream.Collectors;
 public class HandlerCompileValidator extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        TypeElement syncHandler = null;
-        TypeElement asyncHandler = null;
-        Map<TypeElement, List<Integer>> asyncHandlerPortIndex = new HashMap<>();
+        TypeElement globalPortHandler = null;
+        Map<TypeElement, List<Integer>> handlerPortIndex = new HashMap<>();
         for (Element element : roundEnv.getElementsAnnotatedWith(StreamHandler.class)) {
             if (element.getKind() == ElementKind.CLASS) {
                 TypeElement handler = (TypeElement) element;
@@ -36,12 +34,8 @@ public class HandlerCompileValidator extends AbstractProcessor {
 
                         // 获取方法注解
                         InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
-                        SyncInflowMapping syncInflowMapping = method.getAnnotation(SyncInflowMapping.class);
-
-                        // 校验方法注解合法性
-                        if (inflowMapping != null && syncInflowMapping != null) {
-                            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                    "@" + InflowMapping.class.getSimpleName() + " and @" + SyncInflowMapping.class.getSimpleName() + " cannot used together on Method: " + method, element);
+                        if (inflowMapping == null) {
+                            continue;
                         }
 
 
@@ -65,52 +59,38 @@ public class HandlerCompileValidator extends AbstractProcessor {
                                     "Method: " + method + " parameter must be set " + InflowMessage.class.getName(), element);
                         }
 
-                        if (inflowMapping != null) {
-                            if (inflowMapping.portIndex() <= 0 && inflowMapping.portIndex() != -1) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @" + InflowMapping.class.getSimpleName() + " portIndex value cannot be negative", element);
-                            } else if (inflowMapping.portIndex() == -1 && asyncHandler != null) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Already has a AsyncHandler which not specified portIndex to listen all " +
-                                                "inport data, so AsyncHandler cannot be duplication! Method: " + method, element);
-                            }
-
-                            if (inflowMapping.portIndex() != -1) {
-                                List<Integer> existInportIndexes = asyncHandlerPortIndex.get(handler);
-                                if (CollectionUtils.isEmpty(existInportIndexes)) {
-                                    existInportIndexes = new ArrayList<>(inflowMapping.portIndex());
-                                }
-                                existInportIndexes.add(inflowMapping.portIndex());
-                                asyncHandlerPortIndex.put(handler, existInportIndexes);
-                            }
-
-                            asyncHandler = handler;
+                        // 校验注解设定值合法性
+                        if (inflowMapping.portIndex() <= 0 && inflowMapping.portIndex() != -1) {
+                            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                    "Method: " + method + " @" + InflowMapping.class.getSimpleName() + " portIndex value cannot be negative", element);
                         }
 
-                        if (syncInflowMapping != null) {
-                            if (syncHandler != null) {
-                                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                                        "Method: " + method + " @" + SyncInflowMapping.class.getSimpleName() + "  function cannot be duplication", element);
-                            }
-
-                            syncHandler = handler;
+                        // 校验是否存在重复的全局监听handler
+                        if (inflowMapping.portIndex() == -1 && globalPortHandler != null) {
+                            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                                    "There already has a global port handler to listen all " +
+                                            "inport data, and cannot be duplication! Method: " + method, element);
                         }
 
+                        globalPortHandler = handler;
+
+                        // 缓存输入端口和handler的映射
+                        if (inflowMapping.portIndex() != -1) {
+                            List<Integer> existInportIndexes = handlerPortIndex.get(handler);
+                            if (CollectionUtils.isEmpty(existInportIndexes)) {
+                                existInportIndexes = new ArrayList<>(inflowMapping.portIndex());
+                            }
+                            existInportIndexes.add(inflowMapping.portIndex());
+                            handlerPortIndex.put(handler, existInportIndexes);
+                        }
                     }
                 }
-
-                // 校验是否同时存在同步和异步处理器
-                if (syncHandler != null && asyncHandler != null) {
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
-                            "@" + InflowMapping.class.getSimpleName() + " handler: " + asyncHandler + " and @" + SyncInflowMapping.class.getSimpleName() + "  handler: "
-                                    + syncHandler + " cannot exist together", element);
-                }
-
             }
         }
 
+        // 全局校验输入端口有没有重复的handler
         String globalDuplication;
-        if ((globalDuplication = getGlobalInPortDuplication(asyncHandlerPortIndex)) != null) {
+        if ((globalDuplication = getGlobalInPortDuplication(handlerPortIndex)) != null) {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                     "handler Classes: " + globalDuplication + " cannot has duplication inport");
         }
@@ -145,23 +125,5 @@ public class HandlerCompileValidator extends AbstractProcessor {
         }
 
         return null;
-    }
-
-    private static boolean hasDuplicateOrNegative(int[] array) {
-        if (array == null || array.length == 0) {
-            return false;
-        }
-
-        HashSet<Integer> set = new HashSet<>();
-        for (int num : array) {
-            if (!set.add(num)) {
-                return true;
-            }
-
-            if (num <= 0) {
-                return true;
-            }
-        }
-        return false;
     }
 }

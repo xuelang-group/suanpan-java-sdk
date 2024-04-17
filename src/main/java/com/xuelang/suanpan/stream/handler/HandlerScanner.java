@@ -2,7 +2,6 @@ package com.xuelang.suanpan.stream.handler;
 
 import com.xuelang.suanpan.annotation.InflowMapping;
 import com.xuelang.suanpan.annotation.StreamHandler;
-import com.xuelang.suanpan.annotation.SyncInflowMapping;
 import com.xuelang.suanpan.annotation.validator.HandlerRuntimeValidator;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
 import lombok.extern.slf4j.Slf4j;
@@ -50,27 +49,21 @@ public class HandlerScanner {
             Annotation annotation = clazz.getAnnotation(StreamHandler.class);
             if (annotation != null) {
                 log.info("scanned stream handler:{}", clazz.getName());
-                HandlerRuntimeValidator.validateHandlerPortValues(clazz);
                 try {
                     Object instance = clazz.getDeclaredConstructor().newInstance();
                     Method[] methods = clazz.getDeclaredMethods();
-                    List<Method> filteredMethods = Arrays.stream(methods).filter(method -> (method.isAnnotationPresent(InflowMapping.class)
-                            || method.isAnnotationPresent(SyncInflowMapping.class))).collect(Collectors.toList());
+                    List<Method> filteredMethods = Arrays.stream(methods).filter(method -> method.isAnnotationPresent(InflowMapping.class)).collect(Collectors.toList());
+                    HandlerRuntimeValidator.validateHandlerPortValues(clazz, filteredMethods);
                     for (Method method : filteredMethods) {
                         HandlerMethodEntry handlerMethodEntry = new HandlerMethodEntry();
                         handlerMethodEntry.setInstance(instance);
                         handlerMethodEntry.setMethod(method);
-                        if (method.isAnnotationPresent(InflowMapping.class)) {
-                            InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
-                            registry.regist(ConstantConfiguration.getByInportIndex(inflowMapping.portIndex()), handlerMethodEntry);
-                            log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
-                        } else {
-                            registry.regist(null, handlerMethodEntry);
-                            log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
-                        }
+                        InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
+                        registry.regist(ConstantConfiguration.getByInportIndex(inflowMapping.portIndex()), handlerMethodEntry);
+                        log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                     }
                 } catch (Exception e) {
-                    log.error("regist handler error", e);
+                    log.error("register handler error", e);
                     throw new RuntimeException(e);
                 }
             }

@@ -1,9 +1,7 @@
 package com.xuelang.suanpan.annotation.validator;
 
 import com.xuelang.suanpan.annotation.InflowMapping;
-import com.xuelang.suanpan.annotation.SyncInflowMapping;
 import com.xuelang.suanpan.configuration.ConstantConfiguration;
-import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
 import com.xuelang.suanpan.stream.message.InflowMessage;
 import com.xuelang.suanpan.stream.message.OutflowMessage;
 import org.apache.commons.collections4.CollectionUtils;
@@ -13,65 +11,50 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class HandlerRuntimeValidator {
 
-    private static boolean existSyncHandler = false;
+    private static volatile boolean existGlobalHandler = false;
 
-    private static Map<Integer, Integer> globalAsyncInPortHandler = new ConcurrentHashMap<>();
+    private static volatile Class<?> globalHandlerClass;
 
-    public static void validateHandlerPortValues(Class<?> clazz) throws RuntimeException {
+    private static volatile Method globalHandlerMethod;
+
+    private static Map<Integer, Integer> InPortHandlerMap = new ConcurrentHashMap<>();
+
+    public static void validateHandlerPortValues(Class<?> clazz, List<Method> filteredMethods) throws RuntimeException {
         int inportMaxIndex = ConstantConfiguration.getInportMaxIndex();
-
         if (inportMaxIndex <= 0) {
             throw new RuntimeException("the node has no inport, can not define a suanpan handler use " + InflowMapping.class.getSimpleName() + " handler, Clazz: "
                     + clazz.getName());
         }
 
-        Method[] methods = clazz.getDeclaredMethods();
-        List<Method> filteredMethods = Arrays.stream(methods).filter(method -> (method.isAnnotationPresent(InflowMapping.class)
-                || method.isAnnotationPresent(SyncInflowMapping.class))).collect(Collectors.toList());
-
         filteredMethods.stream().forEach(method -> {
-            if (method.isAnnotationPresent(InflowMapping.class)) {
-                if (NodeReceiveMsgType.sync.equals(ConstantConfiguration.getReceiveMsgType())) {
-                    throw new RuntimeException("Sync_Received node can not use " + InflowMapping.class.getSimpleName() + " handler, Clazz: "
-                            + clazz.getName() + ", Method: " + method.getName());
-                }
-
-                validate(clazz, method);
-                InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
-                if (inflowMapping.portIndex() != -1 &&
-                        (inflowMapping.portIndex() > inportMaxIndex || inflowMapping.portIndex() <= 0)) {
-                    throw new RuntimeException(InflowMapping.class.getSimpleName() + " illegal scope inport value set, " +
-                            "cannot be negative value or bigger than port index max value: " + inportMaxIndex + ", Clazz: "
-                            + clazz.getName() + ", Method: " + method.getName());
-                }
-
-                if (inflowMapping.portIndex() != -1) {
-                    if (globalAsyncInPortHandler.containsKey(inflowMapping.portIndex())) {
-                        throw new RuntimeException("async handler method cannot has duplication port index " + InflowMapping.class.getSimpleName() + " handler, Clazz: "
-                                + clazz.getName() + ", Method: " + method.getName());
-                    } else {
-                        globalAsyncInPortHandler.put(inflowMapping.portIndex(), inflowMapping.portIndex());
-                    }
-                }
+            validate(clazz, method);
+            InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
+            if (inflowMapping.portIndex() != -1 &&
+                    (inflowMapping.portIndex() > inportMaxIndex || inflowMapping.portIndex() <= 0)) {
+                throw new RuntimeException(InflowMapping.class.getSimpleName() + " illegal scope inport value set, " +
+                        "cannot be negative value or bigger than port index max value: " + inportMaxIndex + ", Clazz: "
+                        + clazz.getName() + ", Method: " + method.getName());
             }
 
-            if (method.isAnnotationPresent(SyncInflowMapping.class)) {
-                if (NodeReceiveMsgType.async.equals(ConstantConfiguration.getReceiveMsgType())) {
-                    throw new RuntimeException("Async_Received node can not use " + SyncInflowMapping.class.getSimpleName() + " handler, Clazz: "
-                            + clazz.getName() + ", Method: " + method.getName());
-                }
+            if (existGlobalHandler) {
+                throw new RuntimeException(globalHandlerClass.getName() + "_" + globalHandlerMethod.getName() + " is global handler which listen all inport data, " +
+                        "cannot register any other handler duplication! Caused by: " + clazz.getName() + ", Method: " + method.getName());
+            }
 
-                if (existSyncHandler) {
-                    throw new RuntimeException("SyncHandler cannot be duplication " + SyncInflowMapping.class.getSimpleName() + " handler, Clazz: "
+            if (inflowMapping.portIndex() != -1) {
+                if (InPortHandlerMap.containsKey(inflowMapping.portIndex())) {
+                    throw new RuntimeException("handler method cannot has duplication port index " + " Caused by: "
                             + clazz.getName() + ", Method: " + method.getName());
+                } else {
+                    InPortHandlerMap.put(inflowMapping.portIndex(), inflowMapping.portIndex());
                 }
-
-                validate(clazz, method);
-                existSyncHandler = true;
+            } else if (inflowMapping.portIndex() == -1 && !existGlobalHandler) {
+                existGlobalHandler = true;
+                globalHandlerClass = clazz;
+                globalHandlerMethod = method;
             }
         });
     }

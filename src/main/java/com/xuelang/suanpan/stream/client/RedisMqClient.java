@@ -72,11 +72,6 @@ public class RedisMqClient extends AbstractMqClient {
     private final StatefulRedisConnection<String, String> sendConnection;
     private final SubscriberConsumeWorker subscriberConsumeWorker;
 
-
-    public void setRestartDelay(long restartDelay) {
-        this.restartDelay = restartDelay;
-    }
-
     public RedisMqClient(HandlerProxy proxy, String queue, String group, String consumedMsgId, boolean isNoAck, Long restartDelay) {
         this.queue = queue;
         this.noAck = isNoAck;
@@ -98,30 +93,6 @@ public class RedisMqClient extends AbstractMqClient {
         this.proxy = proxy;
         createConsumerGroup();
         this.subscriberConsumeWorker = new SubscriberConsumeWorker(createCmdArgs(name, 0, defaultOnceConsumeCount), proxy);
-    }
-
-    public void createConsumerGroup() {
-        CommandArgs<String, String> args = new CommandArgs<>(StringCodec.UTF8)
-                .add(CommandKeyword.CREATE)
-                .add(this.queue)
-                .add(group)
-                .add("0")
-                .add("MKSTREAM");
-        RedisAsyncCommands<String, String> commands = this.consumeConnection.async();
-        RedisFuture<String> future = commands.dispatch(CommandType.XGROUP, new StatusOutput<>(StringCodec.UTF8), args);
-        try {
-            future.get();
-        } catch (ExecutionException e) {
-            if (StringUtils.containsIgnoreCase(e.getMessage(), SEARCH_MSG)) {
-                return;
-            }
-
-            log.error("block get mq message error", e);
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            log.error("block get mq message error", e);
-            throw new RuntimeException(e);
-        }
     }
 
     @Override
@@ -252,6 +223,30 @@ public class RedisMqClient extends AbstractMqClient {
         }
     }
 
+    private void createConsumerGroup() {
+        CommandArgs<String, String> args = new CommandArgs<>(StringCodec.UTF8)
+                .add(CommandKeyword.CREATE)
+                .add(this.queue)
+                .add(group)
+                .add("0")
+                .add("MKSTREAM");
+        RedisAsyncCommands<String, String> commands = this.consumeConnection.async();
+        RedisFuture<String> future = commands.dispatch(CommandType.XGROUP, new StatusOutput<>(StringCodec.UTF8), args);
+        try {
+            future.get();
+        } catch (ExecutionException e) {
+            if (StringUtils.containsIgnoreCase(e.getMessage(), SEARCH_MSG)) {
+                return;
+            }
+
+            log.error("block get mq message error", e);
+            throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            log.error("block get mq message error", e);
+            throw new RuntimeException(e);
+        }
+    }
+
     private CommandArgs<String, String> createCmdArgs(String consumerName, long blockMillis, long count) {
         CommandArgs<String, String> consumeArgs = new CommandArgs<>(StringCodec.UTF8)
                 .add(CommandKeyword.GROUP).add(group)
@@ -268,11 +263,10 @@ public class RedisMqClient extends AbstractMqClient {
         return consumeArgs;
     }
 
-
-    private class InvokeHandlerTask implements Runnable {
+    private class ProxyInvocation implements Runnable {
         private final MetaInflowMessage metaInflowMessage;
 
-        public InvokeHandlerTask(MetaInflowMessage metaInflowMessage) {
+        public ProxyInvocation(MetaInflowMessage metaInflowMessage) {
             this.metaInflowMessage = metaInflowMessage;
         }
 
@@ -338,14 +332,14 @@ public class RedisMqClient extends AbstractMqClient {
                         return;
                     }
 
-                    RedisMqClient.InvokeHandlerTask invokeHandlerTask = new RedisMqClient.InvokeHandlerTask(metaInflowMessage);
+                    ProxyInvocation proxyInvocation = new ProxyInvocation(metaInflowMessage);
                     try {
-                        ThreadPool.pool().submit(invokeHandlerTask);
+                        ThreadPool.pool().submit(proxyInvocation);
                     } catch (RejectedExecutionException e) {
                         try {
                             log.warn("consume stream message too fast and invoke too late, need wait a moment to" +
                                     " consume message and submit invoke task!");
-                            ThreadPool.pool().getQueue().put(invokeHandlerTask);
+                            ThreadPool.pool().getQueue().put(proxyInvocation);
                         } catch (InterruptedException ex) {
                             log.error("wait a moment to consume message and submit invoke task", e);
                         }
@@ -354,31 +348,9 @@ public class RedisMqClient extends AbstractMqClient {
             }
         }
 
-        public synchronized void pause() {
-            if (consumeStatus.compareAndSet(1, 2)) {
-                if (future != null) {
-                    future.cancel(true);
-                }
-
-
-                try {
-                    singleThreadPoolExecutor.wait();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-
-            }
-        }
-
         public void start() {
             if (consumeStatus.compareAndSet(0, 1)) {
                 singleThreadPoolExecutor.submit(this);
-            }
-        }
-
-        public synchronized void resume() {
-            if (consumeStatus.compareAndSet(2, 1)) {
-                singleThreadPoolExecutor.notify();
             }
         }
     }

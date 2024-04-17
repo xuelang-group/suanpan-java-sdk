@@ -146,10 +146,9 @@ public class RedisMqClient extends AbstractMqClient {
             if (pollingLock.tryLock(timeoutMillis, TimeUnit.MILLISECONDS)) {
                 long blockMillis = timeoutMillis - (System.currentTimeMillis() - start);
                 List<Object> consumedObjects;
-                RedisFuture<List<Object>> future = null;
-                log.info("start polling message operation");
+                log.info("start polling message");
                 try {
-                    future = consumeConnection.async().dispatch(CommandType.XREADGROUP,
+                    RedisFuture<List<Object>> future = consumeConnection.async().dispatch(CommandType.XREADGROUP,
                             new NestedMultiOutput<>(StringCodec.UTF8), createCmdArgs(name, blockMillis, count));
                     consumedObjects = future.get(blockMillis, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException | ExecutionException e) {
@@ -159,7 +158,7 @@ public class RedisMqClient extends AbstractMqClient {
                     log.error("polling message from mq timeout", e);
                     return null;
                 } finally {
-                    log.info("finish polling message operation");
+                    log.info("finish polling message");
                     pollingLock.unlock();
                 }
 
@@ -308,12 +307,10 @@ public class RedisMqClient extends AbstractMqClient {
         @Override
         public void run() throws RuntimeException {
             while (consumeStatus.get() == 1) {
-                log.info("do fixed consume task");
                 List<Object> consumedObjects;
                 try {
                     future = consumeConnection.async().dispatch(CommandType.XREADGROUP, new NestedMultiOutput<>(StringCodec.UTF8), commandArgs);
                     consumedObjects = future.get();
-                    log.info("fixed consume task consumed message:{}", JSON.toJSONString(consumedObjects.get(0)));
                 } catch (InterruptedException | ExecutionException e) {
                     log.error("consume message from mq error", e);
                     LockSupport.parkNanos(restartDelay * 1000000);
@@ -361,7 +358,6 @@ public class RedisMqClient extends AbstractMqClient {
             if (consumeStatus.compareAndSet(1, 2)) {
                 if (future != null) {
                     future.cancel(true);
-                    log.info("pause fixed consume task");
                 }
 
 
@@ -376,14 +372,12 @@ public class RedisMqClient extends AbstractMqClient {
 
         public void start() {
             if (consumeStatus.compareAndSet(0, 1)) {
-                log.info("start fixed consume task");
                 singleThreadPoolExecutor.submit(this);
             }
         }
 
         public synchronized void resume() {
             if (consumeStatus.compareAndSet(2, 1)) {
-                log.info("resume fixed consume task");
                 singleThreadPoolExecutor.notify();
             }
         }

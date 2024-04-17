@@ -1,6 +1,6 @@
 package com.xuelang.suanpan.common.exception;
 
-public class StreamGlobalException extends RuntimeException{
+public class StreamGlobalException extends RuntimeException {
 
     private int code;
 
@@ -16,5 +16,11 @@ public class StreamGlobalException extends RuntimeException{
         super(globalExceptionType.getMessage());
         this.code = globalExceptionType.getCode();
         this.msg = globalExceptionType.getMessage();
+    }
+
+    public StreamGlobalException(GlobalExceptionType globalExceptionType, String msg) {
+        super(globalExceptionType.getMessage() + ", " + msg);
+        this.code = globalExceptionType.getCode();
+        this.msg = msg;
     }
 }

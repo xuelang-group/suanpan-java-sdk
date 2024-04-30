@@ -20,33 +20,32 @@ public class HandlerProxy {
     }
 
 
-    public MetaOutflowMessage invoke(MetaInflowMessage metaInflowMessage) throws StreamGlobalException{
+    public MetaOutflowMessage invoke(MetaInflowMessage metaInflowMessage) {
         log.debug("meta inflow message: {}", JSON.toJSONString(metaInflowMessage));
         if (metaInflowMessage == null) {
-            throw new StreamGlobalException(GlobalExceptionType.IllegalStreamMessage);
+            log.warn("illegal stream message, inflow message is empty");
+            return null;
         }
 
         Inport firstInport = metaInflowMessage.getInPortDataMap().keySet().stream().findFirst().get();
         HandlerMethodEntry handlerMethodEntry;
         if ((handlerMethodEntry = registry.get(firstInport)) == null) {
             // TODO: 2024/3/12 发送事件到平台
-            throw new StreamGlobalException(GlobalExceptionType.NoSuchHandlerException);
+            log.warn("no such handler for {}", firstInport.getUuid());
         }
 
-        InflowMessage inflowMessage;
-        OutflowMessage outflowMessage;
+        OutflowMessage outflowMessage = null;
         try {
-            inflowMessage = metaInflowMessage.covert();
+            InflowMessage inflowMessage = metaInflowMessage.covert();
             outflowMessage = (OutflowMessage) handlerMethodEntry.getMethod().invoke(handlerMethodEntry.getInstance(), inflowMessage);
-            if (outflowMessage == null) {
-                return null;
-            }
         } catch (IllegalAccessException e) {
-            log.error("invoke suanpan handler error", e);
-            throw new StreamGlobalException(GlobalExceptionType.InvocationHandlerException, e);
+            log.error("invocation handler method error", e);
         } catch (InvocationTargetException e) {
-            log.error("invoke suanpan handler error", e);
-            throw new StreamGlobalException(GlobalExceptionType.InvocationHandlerException, e);
+            log.error("invocation handler method error", e);
+        }
+
+        if (outflowMessage == null) {
+            return null;
         }
 
         MetaOutflowMessage metaOutflowMessage = new MetaOutflowMessage();

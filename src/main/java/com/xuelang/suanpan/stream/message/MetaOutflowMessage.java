@@ -2,7 +2,7 @@ package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.configuration.Parameter;
 import com.xuelang.suanpan.common.entities.connection.Connection;
 import com.xuelang.suanpan.common.entities.io.Outport;
 import org.apache.commons.collections4.CollectionUtils;
@@ -13,11 +13,11 @@ import java.util.*;
 public class MetaOutflowMessage {
     private MetaContext metaContext;
     private Map<Outport, Object> outPortDataMap;
-    private boolean p2p = ConstantConfiguration.getEnableP2pSend();
-    private String sendMasterQueue = ConstantConfiguration.getSendMasterQueue();
-    private String nodeId = ConstantConfiguration.getNodeId();
-    private Long maxLength = ConstantConfiguration.getQueueMaxSendLen();
-    private boolean approximateTrimming = ConstantConfiguration.getQueueSendTrim();
+    private boolean p2p = Parameter.getEnableP2pSend();
+    private String sendMasterQueue = Parameter.getSendMasterQueue();
+    private String nodeId = Parameter.getNodeId();
+    private Long maxLength = Parameter.getQueueMaxSendLen();
+    private boolean approximateTrimming = Parameter.getQueueSendTrim();
 
     public MetaOutflowMessage(){
         metaContext = new MetaContext();
@@ -72,12 +72,12 @@ public class MetaOutflowMessage {
 
         outPortDataMap.keySet().stream().forEach(key -> {
             list.add(key.getUuid());
-            list.add(JSON.toJSONString(outPortDataMap.get(key)));
+            list.add(outPortDataMap.get(key));
         });
         return list.toArray();
     }
 
-    public Map<String, Object[]> toP2PQueueData() {
+    public Map<String, Object[]> toP2PStreamData() {
         Map<String, List<Object>> tmpResult = new HashMap<>();
         List<Object> commonInfo = new ArrayList<>();
         if (StringUtils.isNotBlank(this.nodeId)) {
@@ -97,8 +97,8 @@ public class MetaOutflowMessage {
         commonInfo.add("extra");
         commonInfo.add(JSON.toJSONString(this.metaContext.getExtra()));
         outPortDataMap.keySet().stream().forEach(outPort -> {
-            String outPortData = JSON.toJSONString(outPortDataMap.get(outPort));
-            List<Connection> tgtConnections = ConstantConfiguration.getConnections(outPort);
+            Object outPortData = outPortDataMap.get(outPort);
+            List<Connection> tgtConnections = Parameter.getConnections(outPort);
             if (!CollectionUtils.isEmpty(tgtConnections)){
                 tgtConnections.stream().forEach(connection -> {
                     String tgtSendQueue = connection.getTgtQueue();

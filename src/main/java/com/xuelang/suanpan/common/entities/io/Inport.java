@@ -2,7 +2,7 @@ package com.xuelang.suanpan.common.entities.io;
 
 import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.configuration.Parameter;
 import org.apache.commons.lang3.StringUtils;
 
 public class Inport extends BasePort {
@@ -11,7 +11,7 @@ public class Inport extends BasePort {
     }
     public static Inport bind(Integer inportIndex) throws StreamGlobalException {
         String key = "in" + inportIndex;
-        Inport inport = ConstantConfiguration.getByInPortUuid(key);
+        Inport inport = Parameter.getByInPortUuid(key);
         if (inport == null){
             throw new StreamGlobalException(GlobalExceptionType.NoSuchInPortException);
         }
@@ -23,7 +23,7 @@ public class Inport extends BasePort {
         if (StringUtils.isBlank(inPortUUID)){
             return null;
         }
-        Inport inport = ConstantConfiguration.getByInPortUuid(inPortUUID);
+        Inport inport = Parameter.getByInPortUuid(inPortUUID);
         if (inport == null){
             throw new StreamGlobalException(GlobalExceptionType.NoSuchInPortException);
         }

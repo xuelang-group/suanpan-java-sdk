@@ -4,7 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.xuelang.suanpan.common.entities.io.Outport;
 import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.configuration.Parameter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,9 +42,20 @@ public class OutflowMessage {
          * @param data
          * @return
          */
-        public OutflowMessageBuilder setData(Integer portIndex, Object data) {
+        public OutflowMessageBuilder setData(Integer portIndex, String data) {
             Outport outport;
-            if ((outport = ConstantConfiguration.getByOutportIndex(portIndex)) == null) {
+            if ((outport = Parameter.getByOutportIndex(portIndex)) == null) {
+                throw new StreamGlobalException(GlobalExceptionType.NoSuchOutPortException);
+            }
+
+            // TODO: 2024/3/12 根据输出端口数据类型，将data转成对应的类型
+            outflowMessage.outPortDataMap.put(outport, data);
+            return this;
+        }
+
+        public OutflowMessageBuilder setData(Integer portIndex, byte[] data) {
+            Outport outport;
+            if ((outport = Parameter.getByOutportIndex(portIndex)) == null) {
                 throw new StreamGlobalException(GlobalExceptionType.NoSuchOutPortException);
             }
 

@@ -1,9 +1,9 @@
 package com.xuelang.suanpan.client;
 
-import com.xuelang.suanpan.common.entities.BaseSpDomainEntity;
 import com.xuelang.suanpan.common.entities.ProxrConnectionParam;
 import com.xuelang.suanpan.configuration.Configuration;
 import com.xuelang.suanpan.event.Event;
+import com.xuelang.suanpan.service.IService;
 import com.xuelang.suanpan.service.Service;
 import com.xuelang.suanpan.state.State;
 import com.xuelang.suanpan.stream.IStream;
@@ -87,6 +87,7 @@ public class SpClientFactory {
             }
         }
 
+        @Override
         public IStream stream() {
             if (null == stream) {
                 synchronized (this) {
@@ -99,6 +100,7 @@ public class SpClientFactory {
             return stream;
         }
 
+        @Override
         public Configuration configuration() {
             return configuration;
         }
@@ -116,7 +118,7 @@ public class SpClientFactory {
         }
 
         @Override
-        public Service service() {
+        public IService service() {
             if (null == service) {
                 synchronized (this) {
                     if (null == service) {
@@ -140,7 +142,7 @@ public class SpClientFactory {
             return state;
         }
 
-        private <T extends BaseSpDomainEntity> T createInstance(Class<T> clazz) {
+        private <T> T createInstance(Class<T> clazz) {
             try {
                 Constructor<T> constructor;
                 if (proxrConnectionParam == null){

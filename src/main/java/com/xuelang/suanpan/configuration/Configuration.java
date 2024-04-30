@@ -15,7 +15,7 @@ public class Configuration extends BaseSpDomainEntity {
     }
 
     public Object get(String key) {
-        Object value = ConstantConfiguration.get(key, null);
+        Object value = Parameter.get(key, null);
         if (value != null) {
             return value;
         }

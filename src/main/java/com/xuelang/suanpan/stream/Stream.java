@@ -5,8 +5,7 @@ import com.xuelang.suanpan.common.entities.ProxrConnectionParam;
 import com.xuelang.suanpan.common.entities.io.Inport;
 import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
-import com.xuelang.suanpan.configuration.ConfigurationKeys;
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.configuration.Parameter;
 import com.xuelang.suanpan.stream.client.AbstractMqClient;
 import com.xuelang.suanpan.stream.client.RedisMqClient;
 import com.xuelang.suanpan.stream.handler.AbstractStreamHandler;
@@ -56,7 +55,7 @@ public class Stream extends BaseSpDomainEntity implements IStream {
         super();
         this.proxy = new HandlerProxy();
         registry = HandlerRegistry.getInstance();
-        mqClient = createMqClient(ConstantConfiguration.getReceiveQueue(), group, consumedMessageId, noAck, restartDelay);
+        mqClient = createMqClient(Parameter.getReceiveQueue(), group, consumedMessageId, noAck, restartDelay);
         if (!registry.isEmpty()) {
             mqClient.consume();
         }
@@ -65,14 +64,14 @@ public class Stream extends BaseSpDomainEntity implements IStream {
     private Stream(ProxrConnectionParam proxrConnectionParam) {
         super(proxrConnectionParam);
         registry = HandlerRegistry.getInstance();
-        mqClient = createMqClient(ConstantConfiguration.getReceiveQueue(), group, consumedMessageId, noAck, restartDelay);
+        mqClient = createMqClient(Parameter.getReceiveQueue(), group, consumedMessageId, noAck, restartDelay);
         if (!registry.isEmpty()) {
             mqClient.consume();
         }
     }
 
     @Override
-    public String publish(OutflowMessage outflowMessage, Context context) throws StreamGlobalException{
+    public String publish(OutflowMessage outflowMessage, Context context) throws StreamGlobalException {
         if (StringUtils.isBlank(context.getMessageId())) {
             throw new StreamGlobalException(GlobalExceptionType.IllegalStreamMessage);
         }
@@ -81,7 +80,7 @@ public class Stream extends BaseSpDomainEntity implements IStream {
         }
 
 
-        context.getExt().append(ConstantConfiguration.getNodeId());
+        context.getExt().append(Parameter.getNodeId());
 
         MetaOutflowMessage metaOutflowMessage = new MetaOutflowMessage();
         MetaContext metaContext = new MetaContext();
@@ -92,11 +91,10 @@ public class Stream extends BaseSpDomainEntity implements IStream {
         return mqClient.publish(metaOutflowMessage);
     }
 
-
     @Override
     public InflowMessage polling(long timeoutMillis) {
-        List<InflowMessage> result =  mqClient.polling(1, timeoutMillis);
-        if (CollectionUtils.isEmpty(result)){
+        List<InflowMessage> result = mqClient.polling(1, timeoutMillis);
+        if (CollectionUtils.isEmpty(result)) {
             return null;
         }
 
@@ -105,6 +103,9 @@ public class Stream extends BaseSpDomainEntity implements IStream {
 
     @Override
     public List<InflowMessage> polling(int count, long timeoutMillis) {
+        if (count < 1) {
+            throw new StreamGlobalException(GlobalExceptionType.IllegalParameter, "polling count must bigger than 0");
+        }
         return mqClient.polling(count, timeoutMillis);
     }
 
@@ -147,7 +148,7 @@ public class Stream extends BaseSpDomainEntity implements IStream {
                                             boolean isNoAck, @Nullable Long restartDelay) {
         queue = Objects.requireNonNull(queue, "queue can not be null");
         AbstractMqClient abstractMqClient = null;
-        if ("redis".equals(ConstantConfiguration.get(ConfigurationKeys.mqTypeKey, "redis"))) {
+        if ("redis".equals(Parameter.getMqType())) {
             abstractMqClient = new RedisMqClient(proxy, queue, group, consumedMsgId, isNoAck, restartDelay);
             return abstractMqClient;
         }

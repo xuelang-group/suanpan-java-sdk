@@ -6,7 +6,7 @@ import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.common.pool.ThreadPool;
 import com.xuelang.suanpan.common.utils.SerializeUtil;
-import com.xuelang.suanpan.configuration.ConstantConfiguration;
+import com.xuelang.suanpan.configuration.Parameter;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
 import com.xuelang.suanpan.stream.message.InflowMessage;
 import com.xuelang.suanpan.stream.message.MetaInflowMessage;
@@ -85,7 +85,7 @@ public class RedisMqClient extends AbstractMqClient {
             this.restartDelay = restartDelay;
         }
 
-        RedisURI uri = RedisURI.Builder.redis(ConstantConfiguration.getStreamHost(), ConstantConfiguration.getStreamPort()).build();
+        RedisURI uri = RedisURI.Builder.redis(Parameter.getStreamHost(), Parameter.getStreamPort()).build();
         this.client = RedisClient.create(uri);
         this.client.setOptions(ClientOptions.builder().autoReconnect(true).pingBeforeActivateConnection(true).build());
         this.consumeConnection = this.client.connect();
@@ -108,7 +108,7 @@ public class RedisMqClient extends AbstractMqClient {
 
     @Override
     public List<InflowMessage> polling(int count, long timeoutMillis) throws StreamGlobalException {
-        if (subscriberConsumeWorker.consumeStatus.get() == 1){
+        if (subscriberConsumeWorker.consumeStatus.get() == 1) {
             throw new StreamGlobalException(GlobalExceptionType.IllegalStreamOperation);
         }
 
@@ -173,7 +173,7 @@ public class RedisMqClient extends AbstractMqClient {
         XAddArgs addArgs = XAddArgs.Builder.maxlen(metaOutflowMessage.getMaxLength())
                 .approximateTrimming(metaOutflowMessage.isApproximateTrimming());
         if (metaOutflowMessage.isP2p()) {
-            Map<String, Object[]> p2pDataMap = metaOutflowMessage.toP2PQueueData();
+            Map<String, Object[]> p2pDataMap = metaOutflowMessage.toP2PStreamData();
             if (p2pDataMap == null || p2pDataMap.isEmpty()) {
                 return null;
             }
@@ -183,25 +183,25 @@ public class RedisMqClient extends AbstractMqClient {
                 RedisFuture<String> future = this.sendConnection.async().xadd(entry.getKey(), addArgs, entry.getValue());
                 try {
                     publishResults.add(future.get());
+                    log.info("publish to queue={}, data={}", entry.getKey(), SerializeUtil.serialize(entry.getValue()));
                 } catch (InterruptedException | ExecutionException e) {
                     log.error("publish message to MQ error", e);
-                } finally {
-                    log.info("publish to queue={}, data={}", entry.getKey(), SerializeUtil.serialize(entry.getValue()));
                 }
             });
 
             return publishResults.toString();
-        } else {
-            Object[] outData = metaOutflowMessage.toStreamData();
-            RedisFuture<String> future = this.sendConnection.async().xadd(metaOutflowMessage.getSendMasterQueue(), addArgs, outData);
-            try {
-                return future.get();
-            } catch (InterruptedException | ExecutionException e) {
-                log.error("publish message to MQ error", e);
-                return null;
-            } finally {
-                log.info("publish to queue={}, data={}", metaOutflowMessage.getSendMasterQueue(), SerializeUtil.serialize(outData));
-            }
+        }
+
+
+        Object[] outData = metaOutflowMessage.toStreamData();
+        RedisFuture<String> future = this.sendConnection.async().xadd(metaOutflowMessage.getSendMasterQueue(), addArgs, outData);
+        try {
+            String messageId = future.get();
+            log.info("publish to queue={}, data={}", metaOutflowMessage.getSendMasterQueue(), SerializeUtil.serialize(outData));
+            return messageId;
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("publish message to MQ error", e);
+            return null;
         }
     }
 
@@ -272,13 +272,9 @@ public class RedisMqClient extends AbstractMqClient {
 
         @Override
         public void run() {
-            try {
-                MetaOutflowMessage metaOutflowMessage = proxy.invoke(metaInflowMessage);
-                if (metaOutflowMessage != null && !metaOutflowMessage.isEmpty()) {
-                    publish(metaOutflowMessage);
-                }
-            } catch (StreamGlobalException e) {
-                log.error("invoke suanpan handler error", e);
+            MetaOutflowMessage metaOutflowMessage = proxy.invoke(metaInflowMessage);
+            if (metaOutflowMessage != null && !metaOutflowMessage.isEmpty()) {
+                publish(metaOutflowMessage);
             }
         }
     }
@@ -337,8 +333,7 @@ public class RedisMqClient extends AbstractMqClient {
                         ThreadPool.pool().submit(proxyInvocation);
                     } catch (RejectedExecutionException e) {
                         try {
-                            log.warn("consume stream message too fast and invoke too late, need wait a moment to" +
-                                    " consume message and submit invoke task!");
+                            log.warn("consume faster than process, wait a moment to consume");
                             ThreadPool.pool().getQueue().put(proxyInvocation);
                         } catch (InterruptedException ex) {
                             log.error("wait a moment to consume message and submit invoke task", e);

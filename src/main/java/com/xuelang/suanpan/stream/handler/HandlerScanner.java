@@ -3,7 +3,7 @@ package com.xuelang.suanpan.stream.handler;
 import com.xuelang.suanpan.annotation.InflowMapping;
 import com.xuelang.suanpan.annotation.StreamHandler;
 import com.xuelang.suanpan.annotation.validator.HandlerRuntimeValidator;
-import com.xuelang.suanpan.configuration.Parameter;
+import com.xuelang.suanpan.common.utils.ParameterUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
@@ -59,7 +59,7 @@ public class HandlerScanner {
                         handlerMethodEntry.setInstance(instance);
                         handlerMethodEntry.setMethod(method);
                         InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
-                        registry.regist(Parameter.getByInportIndex(inflowMapping.portIndex()), handlerMethodEntry);
+                        registry.regist(ParameterUtil.getByInportIndex(inflowMapping.portIndex()), handlerMethodEntry);
                         log.info("create suanpan handler, Clazz: {}, Method: {}", instance.getClass().getName(), method.getName());
                     }
                 } catch (Exception e) {

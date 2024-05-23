@@ -1,7 +1,7 @@
 package com.xuelang.suanpan.annotation.validator;
 
 import com.xuelang.suanpan.annotation.InflowMapping;
-import com.xuelang.suanpan.configuration.Parameter;
+import com.xuelang.suanpan.common.utils.ParameterUtil;
 import com.xuelang.suanpan.stream.message.InflowMessage;
 import com.xuelang.suanpan.stream.message.OutflowMessage;
 import org.apache.commons.collections4.CollectionUtils;
@@ -23,7 +23,7 @@ public class HandlerRuntimeValidator {
     private static Map<Integer, Integer> InPortHandlerMap = new ConcurrentHashMap<>();
 
     public static void validateHandlerPortValues(Class<?> clazz, List<Method> filteredMethods) throws RuntimeException {
-        int inportMaxIndex = Parameter.getInportMaxIndex();
+        int inportMaxIndex = ParameterUtil.getInportMaxIndex();
         if (inportMaxIndex <= 0) {
             throw new RuntimeException("the node has no inport, can not define a suanpan handler use " + InflowMapping.class.getSimpleName() + " handler, Clazz: "
                     + clazz.getName());

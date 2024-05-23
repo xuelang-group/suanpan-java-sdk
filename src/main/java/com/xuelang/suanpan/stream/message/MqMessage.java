@@ -1,7 +1,7 @@
 package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSONObject;
-import com.xuelang.suanpan.configuration.Parameter;
+import com.xuelang.suanpan.common.utils.ParameterUtil;
 import com.xuelang.suanpan.common.entities.io.Inport;
 
 import java.util.*;
@@ -73,12 +73,12 @@ public class MqMessage {
             if (extra == null) {
                 extra = new Extra();
             }
-            extra.append(Parameter.getNodeId());
+            extra.append(ParameterUtil.getCurrentNodeId());
             metaContext.setExtra(extra);
             tmpContentMap.remove(EXTRA_KEY);
         } else {
             Extra extra = new Extra();
-            extra.append(Parameter.getNodeId());
+            extra.append(ParameterUtil.getCurrentNodeId());
             metaContext.setExtra(extra);
         }
 
@@ -88,7 +88,7 @@ public class MqMessage {
 
         tmpContentMap.keySet().stream().forEach(key -> {
             Inport inPort;
-            if ((inPort = Parameter.getByInPortUuid(key)) != null) {
+            if ((inPort = ParameterUtil.getByInPortUuid(key)) != null) {
                 metaInflowMessage.append(inPort, tmpContentMap.get(key));
             }
         });

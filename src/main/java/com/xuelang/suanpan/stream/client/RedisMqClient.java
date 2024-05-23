@@ -6,7 +6,7 @@ import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import com.xuelang.suanpan.common.pool.ThreadPool;
 import com.xuelang.suanpan.common.utils.SerializeUtil;
-import com.xuelang.suanpan.configuration.Parameter;
+import com.xuelang.suanpan.common.utils.ParameterUtil;
 import com.xuelang.suanpan.stream.handler.HandlerProxy;
 import com.xuelang.suanpan.stream.message.InflowMessage;
 import com.xuelang.suanpan.stream.message.MetaInflowMessage;
@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
@@ -70,7 +69,8 @@ public class RedisMqClient extends AbstractMqClient {
     private final RedisClient client;
     private final StatefulRedisConnection<String, String> consumeConnection;
     private final StatefulRedisConnection<String, String> sendConnection;
-    private final SubscriberConsumeWorker subscriberConsumeWorker;
+    private volatile InfiniteConsumer infiniteConsumer;
+    private final HandlerProxy proxy;
 
     public RedisMqClient(HandlerProxy proxy, String queue, String group, String consumedMsgId, boolean isNoAck, Long restartDelay) {
         this.queue = queue;
@@ -85,14 +85,13 @@ public class RedisMqClient extends AbstractMqClient {
             this.restartDelay = restartDelay;
         }
 
-        RedisURI uri = RedisURI.Builder.redis(Parameter.getStreamHost(), Parameter.getStreamPort()).build();
+        RedisURI uri = RedisURI.Builder.redis(ParameterUtil.getStreamHost(), ParameterUtil.getStreamPort()).build();
         this.client = RedisClient.create(uri);
         this.client.setOptions(ClientOptions.builder().autoReconnect(true).pingBeforeActivateConnection(true).build());
         this.consumeConnection = this.client.connect();
         this.sendConnection = this.client.connect();
         this.proxy = proxy;
         createConsumerGroup();
-        this.subscriberConsumeWorker = new SubscriberConsumeWorker(createCmdArgs(name, 0, defaultOnceConsumeCount), proxy);
     }
 
     @Override
@@ -104,11 +103,13 @@ public class RedisMqClient extends AbstractMqClient {
         if (this.sendConnection != null) {
             this.sendConnection.close();
         }
+
+        this.client.shutdown();
     }
 
     @Override
     public List<InflowMessage> polling(int count, long timeoutMillis) throws StreamGlobalException {
-        if (subscriberConsumeWorker.consumeStatus.get() == 1) {
+        if (infiniteConsumer != null) {
             throw new StreamGlobalException(GlobalExceptionType.IllegalStreamOperation);
         }
 
@@ -134,7 +135,7 @@ public class RedisMqClient extends AbstractMqClient {
                 }
 
                 MqMessage mqMessage = MqMessage.convert((List) consumedObjects.get(0));
-                acks(queue, group, mqMessage.getMessageIds().toArray(new String[0]));
+                acks(mqMessage.getMessageIds().toArray(new String[0]));
                 List<MetaInflowMessage> metaInflowMessages = mqMessage.getMessages();
                 if (CollectionUtils.isEmpty(metaInflowMessages)) {
                     log.warn("consume message from mq is empty");
@@ -163,8 +164,15 @@ public class RedisMqClient extends AbstractMqClient {
     }
 
     @Override
-    public void consume() {
-        subscriberConsumeWorker.start();
+    public void subscribe() {
+        if (infiniteConsumer == null) {
+            synchronized (this) {
+                if (infiniteConsumer == null) {
+                    infiniteConsumer = new InfiniteConsumer(createCmdArgs(name, 0, defaultOnceConsumeCount));
+                    infiniteConsumer.start();
+                }
+            }
+        }
     }
 
     @Override
@@ -205,28 +213,10 @@ public class RedisMqClient extends AbstractMqClient {
         }
     }
 
-    private void ack(String queue, String group, String messageId) {
-        RedisFuture<Long> xack = this.sendConnection.async().xack(queue, group, messageId);
-        try {
-            xack.get();
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("xack to MQ error", e);
-        }
-    }
-
-    private void acks(String queue, String group, String[] messageIds) {
-        RedisFuture<Long> xack = this.sendConnection.async().xack(queue, group, messageIds);
-        try {
-            xack.get();
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("xack to MQ error", e);
-        }
-    }
-
     private void createConsumerGroup() {
         CommandArgs<String, String> args = new CommandArgs<>(StringCodec.UTF8)
                 .add(CommandKeyword.CREATE)
-                .add(this.queue)
+                .add(queue)
                 .add(group)
                 .add("0")
                 .add("MKSTREAM");
@@ -247,6 +237,24 @@ public class RedisMqClient extends AbstractMqClient {
         }
     }
 
+    private void ack(String messageId) {
+        RedisFuture<Long> xack = this.sendConnection.async().xack(queue, group, messageId);
+        try {
+            xack.get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("xack to MQ error", e);
+        }
+    }
+
+    private void acks(String[] messageIds) {
+        RedisFuture<Long> xack = this.sendConnection.async().xack(queue, group, messageIds);
+        try {
+            xack.get();
+        } catch (InterruptedException | ExecutionException e) {
+            log.error("xack to MQ error", e);
+        }
+    }
+
     private CommandArgs<String, String> createCmdArgs(String consumerName, long blockMillis, long count) {
         CommandArgs<String, String> consumeArgs = new CommandArgs<>(StringCodec.UTF8)
                 .add(CommandKeyword.GROUP).add(group)
@@ -263,10 +271,10 @@ public class RedisMqClient extends AbstractMqClient {
         return consumeArgs;
     }
 
-    private class ProxyInvocation implements Runnable {
+    private class InvocationTask implements Runnable {
         private final MetaInflowMessage metaInflowMessage;
 
-        public ProxyInvocation(MetaInflowMessage metaInflowMessage) {
+        public InvocationTask(MetaInflowMessage metaInflowMessage) {
             this.metaInflowMessage = metaInflowMessage;
         }
 
@@ -279,24 +287,21 @@ public class RedisMqClient extends AbstractMqClient {
         }
     }
 
-    private class SubscriberConsumeWorker implements Runnable {
-        private final HandlerProxy proxy;
+    private class InfiniteConsumer implements Runnable {
         private final CommandArgs<String, String> commandArgs;
         //0:停止, 1:运行, 2:暂停
-        private AtomicInteger consumeStatus = new AtomicInteger(0);
         private RedisFuture<List<Object>> future;
         private final ThreadPoolExecutor singleThreadPoolExecutor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(1), new ThreadFactoryBuilder().setNameFormat("single-pool-%d").build(),
                 new ThreadPoolExecutor.DiscardPolicy());
 
-        public SubscriberConsumeWorker(CommandArgs<String, String> commandArgs, HandlerProxy proxy) {
-            this.proxy = proxy;
+        public InfiniteConsumer(CommandArgs<String, String> commandArgs) {
             this.commandArgs = commandArgs;
         }
 
         @Override
         public void run() throws RuntimeException {
-            while (consumeStatus.get() == 1) {
+            while (true) {
                 List<Object> consumedObjects;
                 try {
                     future = consumeConnection.async().dispatch(CommandType.XREADGROUP, new NestedMultiOutput<>(StringCodec.UTF8), commandArgs);
@@ -308,7 +313,7 @@ public class RedisMqClient extends AbstractMqClient {
                 }
 
                 MqMessage mqMessage = MqMessage.convert((List) consumedObjects.get(0));
-                acks(queue, group, mqMessage.getMessageIds().toArray(new String[0]));
+                acks(mqMessage.getMessageIds().toArray(new String[0]));
 
                 List<MetaInflowMessage> metaInflowMessages = mqMessage.getMessages();
                 if (CollectionUtils.isEmpty(metaInflowMessages)) {
@@ -317,7 +322,7 @@ public class RedisMqClient extends AbstractMqClient {
                 }
 
                 metaInflowMessages.stream().forEach(metaInflowMessage -> {
-                    ack(queue, group, metaInflowMessage.getMetaContext().getMessageId());
+                    ack(metaInflowMessage.getMetaContext().getMessageId());
                     if (metaInflowMessage.isExpired()) {
                         log.info("message is expired, no need to process, msg: {}", JSON.toJSONString(metaInflowMessage));
                         return;
@@ -328,13 +333,13 @@ public class RedisMqClient extends AbstractMqClient {
                         return;
                     }
 
-                    ProxyInvocation proxyInvocation = new ProxyInvocation(metaInflowMessage);
+                    InvocationTask invocationTask = new InvocationTask(metaInflowMessage);
                     try {
-                        ThreadPool.pool().submit(proxyInvocation);
+                        ThreadPool.pool().submit(invocationTask);
                     } catch (RejectedExecutionException e) {
                         try {
                             log.warn("consume faster than process, wait a moment to consume");
-                            ThreadPool.pool().getQueue().put(proxyInvocation);
+                            ThreadPool.pool().getQueue().put(invocationTask);
                         } catch (InterruptedException ex) {
                             log.error("wait a moment to consume message and submit invoke task", e);
                         }
@@ -344,9 +349,7 @@ public class RedisMqClient extends AbstractMqClient {
         }
 
         public void start() {
-            if (consumeStatus.compareAndSet(0, 1)) {
-                singleThreadPoolExecutor.submit(this);
-            }
+            singleThreadPoolExecutor.submit(this);
         }
     }
 }

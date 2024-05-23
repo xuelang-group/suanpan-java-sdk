@@ -5,7 +5,7 @@ import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
 import com.xuelang.suanpan.common.entities.io.Inport;
 import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
-import com.xuelang.suanpan.configuration.Parameter;
+import com.xuelang.suanpan.common.utils.ParameterUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
@@ -57,7 +57,7 @@ public class HandlerRegistry {
                         "There is already a global handler for this inport, cannot register any other handlers duplication");
             }
 
-            if (NodeReceiveMsgType.sync.equals(Parameter.getReceiveMsgType())) {
+            if (NodeReceiveMsgType.sync.equals(ParameterUtil.getReceiveMsgType())) {
                 globalMethodEntry = entry;
                 log.info("node received type is sync, register global handler method entry:{}", JSON.toJSONString(entry));
             } else {

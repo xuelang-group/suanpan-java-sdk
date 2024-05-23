@@ -1,22 +1,23 @@
-package com.xuelang.suanpan.configuration;
+package com.xuelang.suanpan.common.utils;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.xuelang.suanpan.common.entities.connection.Connection;
+import com.xuelang.suanpan.common.entities.io.Line;
 import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
 import com.xuelang.suanpan.common.entities.io.Inport;
 import com.xuelang.suanpan.common.entities.io.Outport;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
-import com.xuelang.suanpan.common.utils.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Constructor;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
-public class Parameter {
+public class ParameterUtil {
     public static final String appTypeKey = "SP_APP_TYPE";
     public static final String appParamsKey = "SP_PARAM";
     public static final String nodeInfoKey = "SP_NODE_INFO";
@@ -82,7 +83,10 @@ public class Parameter {
     private static Map<String, Object> spParamMap = new HashMap<>();
     private static Integer Max_Inport_Index = -1;
     private static NodeReceiveMsgType receiveMsgType;
-    private static Map<Outport, List<Connection>> outPortConnectionMap = new HashMap<>();
+    private static String spSvc;
+    private static Integer spPort;
+    private static Map<Outport, List<Line>> outPortLineMap = new HashMap<>();
+    private static Map<Integer, Connection> invokeConnectionMap = new HashMap<>();
 
     static {
         String spNodeInfoBase64Str = System.getenv("SP_NODE_INFO");
@@ -165,7 +169,7 @@ public class Parameter {
             JSONObject graphData = graph.getJSONObject("data");
             JSONObject processData = graphData.getJSONObject("processes");
             if (processData != null && !processData.isEmpty()) {
-                JSONObject nodeDefinition = processData.getJSONObject(getNodeId());
+                JSONObject nodeDefinition = processData.getJSONObject(getCurrentNodeId());
                 receiveMsgType = NodeReceiveMsgType.getByCode(nodeDefinition.getJSONObject("metadata").getString("receieveMsgType"));
             }
 
@@ -174,7 +178,7 @@ public class Parameter {
                 JSONObject[] connArrays = connData.toArray(JSONObject.class);
                 for (JSONObject item : connArrays) {
                     String srcNodeId = item.getJSONObject("src").getString("process");
-                    if (!srcNodeId.equals(getNodeId())) {
+                    if (!srcNodeId.equals(getCurrentNodeId())) {
                         continue;
                     }
 
@@ -191,67 +195,115 @@ public class Parameter {
                     String tgtNodeId = tgt.getString("process");
                     String tgtInPortUUID = tgt.getString("port");
 
-                    Connection connection = new Connection();
-                    connection.setSrcNodeId(srcNodeId);
-                    connection.setSrcOutPortUUID(srcOutPortUUID);
-                    connection.setTgtNodeId(tgtNodeId);
-                    connection.setTgtInPortUUID(tgtInPortUUID);
-                    connection.setTgtQueue("mq-master-" + getUserId() + "-" + getAppId() + "-" + tgtNodeId);
-                    outPortConnectionMap.compute(outPort, (key, existedList)->{
-                        if (existedList == null){
-                            existedList = new ArrayList<>();
+                    Line line = new Line();
+                    line.setSrcNodeId(srcNodeId);
+                    line.setSrcOutPortUUID(srcOutPortUUID);
+                    line.setTgtNodeId(tgtNodeId);
+                    line.setTgtInPortUUID(tgtInPortUUID);
+                    line.setTgtQueue("mq-master-" + getUserId() + "-" + getAppId() + "-" + tgtNodeId);
+                    outPortLineMap.compute(outPort, (key, existedLines) -> {
+                        if (existedLines == null) {
+                            existedLines = new ArrayList<>();
                         }
 
-                        existedList.add(connection);
-                        return existedList;
+                        existedLines.add(line);
+                        return existedLines;
                     });
+                }
+            }
+
+            //服务调用连线信息
+            JSONArray invokeConnections = graphData.getJSONArray("invokeConnections");
+            if (invokeConnections != null && !invokeConnections.isEmpty()) {
+                JSONObject[] connArrays = invokeConnections.toArray(JSONObject.class);
+                for (JSONObject item : connArrays) {
+                    String srcNodeId = item.getJSONObject("src").getString("process");
+                    if (!srcNodeId.equals(getCurrentNodeId())) {
+                        continue;
+                    }
+
+                    String tgtNodeId = item.getJSONObject("tgt").getString("process");
+                    Integer connId = item.getJSONObject("metadata").getInteger("id");
+
+                    Connection connection = new Connection();
+                    connection.setSrcNodeId(srcNodeId);
+                    connection.setTgtNodeId(tgtNodeId);
+                    connection.setId(connId);
+                    invokeConnectionMap.put(connId, connection);
                 }
             }
         }
     }
 
-    public static List<Connection> getConnections(Outport outPort){
-        if (outPortConnectionMap.isEmpty()){
+    public static Connection getInvokeConnection(Integer connId) {
+        return invokeConnectionMap.get(connId);
+    }
+
+    public static List<Connection> getCurrentNodeConnections() {
+        if (invokeConnectionMap.isEmpty()) {
             return null;
         }
 
-        return outPortConnectionMap.get(outPort);
+        return invokeConnectionMap.values().stream().collect(Collectors.toList());
+    }
+
+    public static List<Line> getIoLines(Outport outPort) {
+        return outPortLineMap.get(outPort);
     }
 
     public static NodeReceiveMsgType getReceiveMsgType() {
         return receiveMsgType;
     }
 
+    public static String getSpSvc() {
+        if (StringUtils.isBlank(spSvc)) {
+            spSvc = (String) get(hostKey, null);
+            if (StringUtils.isBlank(spSvc)) {
+                throw new RuntimeException("no such configuration, " + hostKey);
+            }
+
+            if (spSvc.contains(":")) {
+                String[] tmp = spSvc.split(":");
+                spSvc = tmp[0];
+                spPort = Integer.valueOf(tmp[1]);
+            } else {
+                Object tmp = null;
+                if ((tmp = get(portKey, null)) != null) {
+                    spPort = Integer.valueOf(tmp.toString());
+                }
+            }
+        }
+
+        return spSvc;
+    }
+
+    public static Integer getSpPort() {
+        if (spPort == null) {
+            Object tmp = null;
+            if ((tmp = get(portKey, null)) != null) {
+                spPort = Integer.valueOf(tmp.toString());
+            } else {
+                getSpSvc();
+            }
+        }
+
+        return spPort;
+    }
+
     private static JSONObject getGraph() {
-        String spHost = (String) get(hostKey, null);
-        if (StringUtils.isBlank(spHost)) {
-            throw new RuntimeException("no such configuration, " + hostKey);
-        }
-        Integer spPort = null;
-        if (spHost.contains(":")) {
-            String[] tmp = spHost.split(":");
-            spHost = tmp[0];
-            spPort = Integer.valueOf(tmp[1]);
-        }
-
-        if (get(portKey, null) != null) {
-            spPort = Integer.valueOf(get(portKey, null).toString());
-        }
-
-        Object tls = get(hostTlsKey, null);
-        String protocol = tls == null ? "http" : "https";
+        spSvc = getSpSvc();
+        String protocol = getSpProtocol();
         String appId = getAppId();
-        String secret = getSecret();
         String userId = getUserId();
-        String userIdHeaderField = (String) get(userIdHeaderFieldKey, "x-sp-user-id");
-        String userSignatureHeaderField = (String) get(userSignatureHeaderFieldKey, "x-sp-signature");
-        String userSignVersionHeaderField = (String) get(userSignVersionHeaderFieldKey, "x-sp-sign-version");
-        String signature = HttpUtil.signature(secret, userId);
-        Map<String, String> headers = new HashMap<>();
-        headers.put(userIdHeaderField, userId);
-        headers.put(userSignatureHeaderField, signature);
-        headers.put(userSignVersionHeaderField, "v1");
-        return HttpUtil.sendGet(protocol, spHost, spPort, "app/graph/" + appId, headers, null);
+        Map<String, Object> param = new HashMap<>();
+        param.put("appId", appId);
+        param.put("useId", userId);
+        return HttpUtil.sendPost(protocol, spSvc, spPort, "internal/app/graph/info", null, param);
+    }
+
+    public static String getSpProtocol() {
+        Object tls = get(hostTlsKey, null);
+        return tls == null ? "http" : "https";
     }
 
     public static String getAppId() {
@@ -313,7 +365,7 @@ public class Parameter {
         return value != null ? Boolean.valueOf(value.toString()) : false;
     }
 
-    public static String getNodeId() {
+    public static String getCurrentNodeId() {
         Object value = get(nodeIdKey, null);
         return value != null ? (String) value : null;
     }
@@ -343,7 +395,7 @@ public class Parameter {
         return value != null ? Integer.valueOf(value.toString()) : null;
     }
 
-    public static String getMqType(){
+    public static String getMqType() {
         Object value = get(mqTypeKey, "redis");
         return value.toString();
     }

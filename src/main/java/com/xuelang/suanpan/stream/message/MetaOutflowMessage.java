@@ -2,8 +2,8 @@ package com.xuelang.suanpan.stream.message;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.xuelang.suanpan.configuration.Parameter;
-import com.xuelang.suanpan.common.entities.connection.Connection;
+import com.xuelang.suanpan.common.utils.ParameterUtil;
+import com.xuelang.suanpan.common.entities.io.Line;
 import com.xuelang.suanpan.common.entities.io.Outport;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -13,11 +13,11 @@ import java.util.*;
 public class MetaOutflowMessage {
     private MetaContext metaContext;
     private Map<Outport, Object> outPortDataMap;
-    private boolean p2p = Parameter.getEnableP2pSend();
-    private String sendMasterQueue = Parameter.getSendMasterQueue();
-    private String nodeId = Parameter.getNodeId();
-    private Long maxLength = Parameter.getQueueMaxSendLen();
-    private boolean approximateTrimming = Parameter.getQueueSendTrim();
+    private boolean p2p = ParameterUtil.getEnableP2pSend();
+    private String sendMasterQueue = ParameterUtil.getSendMasterQueue();
+    private String nodeId = ParameterUtil.getCurrentNodeId();
+    private Long maxLength = ParameterUtil.getQueueMaxSendLen();
+    private boolean approximateTrimming = ParameterUtil.getQueueSendTrim();
 
     public MetaOutflowMessage(){
         metaContext = new MetaContext();
@@ -98,19 +98,19 @@ public class MetaOutflowMessage {
         commonInfo.add(JSON.toJSONString(this.metaContext.getExtra()));
         outPortDataMap.keySet().stream().forEach(outPort -> {
             Object outPortData = outPortDataMap.get(outPort);
-            List<Connection> tgtConnections = Parameter.getConnections(outPort);
-            if (!CollectionUtils.isEmpty(tgtConnections)){
-                tgtConnections.stream().forEach(connection -> {
-                    String tgtSendQueue = connection.getTgtQueue();
-                    tmpResult.compute(tgtSendQueue, (inPortUUID, existedList)->{
-                        if (existedList == null){
-                            existedList = new ArrayList<>();
-                            existedList.addAll(commonInfo);
+            List<Line> tgtLines = ParameterUtil.getIoLines(outPort);
+            if (!CollectionUtils.isEmpty(tgtLines)){
+                tgtLines.stream().forEach(line -> {
+                    String tgtSendQueue = line.getTgtQueue();
+                    tmpResult.compute(tgtSendQueue, (inPortUUID, existedObjects)->{
+                        if (existedObjects == null){
+                            existedObjects = new ArrayList<>();
+                            existedObjects.addAll(commonInfo);
                         }
 
-                        existedList.add(connection.getTgtInPortUUID());
-                        existedList.add(outPortData);
-                        return existedList;
+                        existedObjects.add(line.getTgtInPortUUID());
+                        existedObjects.add(outPortData);
+                        return existedObjects;
                     });
                 });
             }

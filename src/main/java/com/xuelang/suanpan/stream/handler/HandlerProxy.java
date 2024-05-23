@@ -3,6 +3,7 @@ package com.xuelang.suanpan.stream.handler;
 import com.alibaba.fastjson2.JSON;
 import com.xuelang.suanpan.common.entities.io.Inport;
 import com.xuelang.suanpan.common.exception.*;
+import com.xuelang.suanpan.stream.client.AbstractMqClient;
 import com.xuelang.suanpan.stream.message.InflowMessage;
 import com.xuelang.suanpan.stream.message.OutflowMessage;
 import com.xuelang.suanpan.stream.message.MetaInflowMessage;
@@ -14,6 +15,8 @@ import java.lang.reflect.InvocationTargetException;
 @Slf4j
 public class HandlerProxy {
     private final HandlerRegistry registry = HandlerRegistry.getInstance();
+
+    private AbstractMqClient abstractMqClient;
 
     public HandlerProxy() {
         HandlerScanner.scan(registry);

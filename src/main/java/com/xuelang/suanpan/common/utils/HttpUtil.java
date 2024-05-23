@@ -28,7 +28,8 @@ public class HttpUtil {
 
     private static OkHttpClient createClient() {
         OkHttpClient.Builder httpClientBuilder = new OkHttpClient.Builder();
-        httpClientBuilder.callTimeout(5000, TimeUnit.MILLISECONDS);
+        httpClientBuilder.callTimeout(5000, TimeUnit.MILLISECONDS).connectionPool(
+                new ConnectionPool(5,3000L, TimeUnit.MILLISECONDS));
         return httpClientBuilder.build();
     }
 

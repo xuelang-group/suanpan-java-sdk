@@ -3,6 +3,7 @@ package com.xuelang.suanpan.client;
 import com.xuelang.suanpan.common.entities.ProxrConnectionParam;
 import com.xuelang.suanpan.configuration.Configuration;
 import com.xuelang.suanpan.event.Event;
+import com.xuelang.suanpan.parameter.Parameter;
 import com.xuelang.suanpan.service.IService;
 import com.xuelang.suanpan.service.Service;
 import com.xuelang.suanpan.state.State;
@@ -64,27 +65,14 @@ public class SpClientFactory {
         private volatile Event event;
         private volatile Service service;
         private volatile State state;
+        private volatile Parameter parameter;
         private ProxrConnectionParam proxrConnectionParam;
 
         public SpClient() {
-            if (null == configuration) {
-                synchronized (this) {
-                    if (null == configuration) {
-                        configuration = createInstance(Configuration.class);
-                    }
-                }
-            }
         }
 
         public SpClient(ProxrConnectionParam proxrConnectionParam) {
             this.proxrConnectionParam = proxrConnectionParam;
-            if (null == configuration) {
-                synchronized (this) {
-                    if (null == configuration) {
-                        configuration = createInstance(Configuration.class);
-                    }
-                }
-            }
         }
 
         @Override
@@ -102,7 +90,28 @@ public class SpClientFactory {
 
         @Override
         public Configuration configuration() {
+            if (null == configuration) {
+                synchronized (this) {
+                    if (null == configuration) {
+                        configuration = createInstance(Configuration.class);
+                    }
+                }
+            }
+
             return configuration;
+        }
+
+        @Override
+        public Parameter parameter() {
+            if (null == parameter) {
+                synchronized (this) {
+                    if (null == parameter) {
+                        parameter = createInstance(Parameter.class);
+                    }
+                }
+            }
+
+            return parameter;
         }
 
         @Override

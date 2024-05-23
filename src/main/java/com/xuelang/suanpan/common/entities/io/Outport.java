@@ -2,7 +2,7 @@ package com.xuelang.suanpan.common.entities.io;
 
 import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
-import com.xuelang.suanpan.configuration.Parameter;
+import com.xuelang.suanpan.common.utils.ParameterUtil;
 import org.apache.commons.lang3.StringUtils;
 
 public class Outport extends BasePort{
@@ -13,7 +13,7 @@ public class Outport extends BasePort{
             return null;
         }
 
-        Outport outport = Parameter.getByOutportIndex(outPortIndex);
+        Outport outport = ParameterUtil.getByOutportIndex(outPortIndex);
         if (outport == null){
             throw new StreamGlobalException(GlobalExceptionType.NoSuchOutPortException);
         }
@@ -25,7 +25,7 @@ public class Outport extends BasePort{
         if (StringUtils.isBlank(outPortUUID)){
             return null;
         }
-        Outport outPort = Parameter.getByOutPortUUID(outPortUUID);
+        Outport outPort = ParameterUtil.getByOutPortUUID(outPortUUID);
         if (outPort == null){
             throw new StreamGlobalException(GlobalExceptionType.NoSuchOutPortException);
         }

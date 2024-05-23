@@ -15,12 +15,7 @@ public class Configuration extends BaseSpDomainEntity {
     }
 
     public Object get(String key) {
-        Object value = Parameter.get(key, null);
-        if (value != null) {
-            return value;
-        }
 
-        // TODO: 2024/3/22  调用配置中心服务获取结果
 
         return null;
     }

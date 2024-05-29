@@ -58,7 +58,7 @@ public class HttpUtil {
         Request.Builder builder = new Request.Builder()
                 .get()
                 .url(url);
-        if (headers != null || !headers.isEmpty()) {
+        if (headers != null && !headers.isEmpty()) {
             headers.entrySet().stream().forEach(entry -> {
                 builder.addHeader(entry.getKey(), entry.getValue());
             });
@@ -101,7 +101,7 @@ public class HttpUtil {
                 .url(url)
                 .build();
 
-        if (headers != null || !headers.isEmpty()) {
+        if (headers != null && !headers.isEmpty()) {
             headers.entrySet().stream().forEach(entry -> {
                 request.newBuilder().addHeader(entry.getKey(), entry.getValue());
             });

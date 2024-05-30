@@ -164,7 +164,7 @@ public class ParameterUtil {
     }
 
     static {
-        JSONObject graph = getGraph();
+        JSONObject graph = getGraphOld();
         if (graph != null) {
             JSONObject graphData = graph.getJSONObject("data");
             JSONObject processData = graphData.getJSONObject("processes");
@@ -299,6 +299,23 @@ public class ParameterUtil {
         param.put("appId", appId);
         param.put("useId", userId);
         return HttpUtil.sendPost(protocol, spSvc, spPort, "internal/app/graph/info", null, param);
+    }
+
+    private static JSONObject getGraphOld() {
+        String protocol = getSpProtocol();
+        String appId = getAppId();
+        String userId = getUserId();
+        String secret = getSecret();
+        spSvc = getSpSvc();
+        String userIdHeaderField = (String) get(userIdHeaderFieldKey, "x-sp-user-id");
+        String userSignatureHeaderField = (String) get(userSignatureHeaderFieldKey, "x-sp-signature");
+        String userSignVersionHeaderField = (String) get(userSignVersionHeaderFieldKey, "x-sp-sign-version");
+        String signature = HttpUtil.signature(secret, userId);
+        Map<String, String> headers = new HashMap<>();
+        headers.put(userIdHeaderField, userId);
+        headers.put(userSignatureHeaderField, signature);
+        headers.put(userSignVersionHeaderField, "v1");
+        return HttpUtil.sendGet(protocol, spSvc, spPort, "app/graph/" + appId, headers, null);
     }
 
     public static String getSpProtocol() {

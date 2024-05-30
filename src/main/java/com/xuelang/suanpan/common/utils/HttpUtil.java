@@ -78,9 +78,9 @@ public class HttpUtil {
                 Objects.requireNonNull(response.body()).close();
             }
         } catch (ConnectException e) {
-            log.error(String.format("http client connect error: {}, {}", e.getCause().getMessage(), e.getMessage()));
+            log.warn(String.format("http client connect error: {}, {}", e.getCause().getMessage(), e.getMessage()));
         } catch (IOException e) {
-            log.error(String.format("{} 请求失败: {}", url, e.getMessage()));
+            log.warn(String.format("{} 请求失败: {}", url, e.getMessage()));
         }
 
         return responseJSON;
@@ -121,9 +121,9 @@ public class HttpUtil {
                 Objects.requireNonNull(response.body()).close();
             }
         } catch (ConnectException e) {
-            log.error(String.format("HTTP client connect error: %s", e.getMessage()), e);
+            log.warn(String.format("HTTP client connect error: %s", e.getMessage()), e);
         } catch (IOException e) {
-            log.error(String.format("Failed to send POST request to %s: %s", url, e.getMessage()), e);
+            log.warn(String.format("Failed to send POST request to %s: %s", url, e.getMessage()), e);
         }
 
         return responseJSON;

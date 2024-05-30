@@ -42,9 +42,9 @@ public class HandlerProxy {
             InflowMessage inflowMessage = metaInflowMessage.covert();
             outflowMessage = (OutflowMessage) handlerMethodEntry.getMethod().invoke(handlerMethodEntry.getInstance(), inflowMessage);
         } catch (IllegalAccessException e) {
-            log.error("invocation handler method error", e);
+            log.warn("invocation handler method error", e);
         } catch (InvocationTargetException e) {
-            log.error("invocation handler method error", e);
+            log.warn("invocation handler method error", e);
         }
 
         if (outflowMessage == null) {

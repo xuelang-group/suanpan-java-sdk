@@ -124,17 +124,30 @@ public class RedisMqClient extends AbstractMqClient {
                             new NestedMultiOutput<>(StringCodec.UTF8), createCmdArgs(name, blockMillis, count));
                     consumedObjects = future.get(blockMillis, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException | ExecutionException e) {
-                    log.error("polling message from mq error", e);
+                    log.warn("polling message from mq error", e);
                     return null;
                 } catch (TimeoutException e) {
-                    log.error("polling message from mq timeout", e);
+                    log.warn("polling message from mq timeout", e);
                     return null;
                 } finally {
                     log.info("finish polling message");
                     pollingLock.unlock();
                 }
 
-                MqMessage mqMessage = MqMessage.convert((List) consumedObjects.get(0));
+                MqMessage mqMessage = null;
+                try {
+                    log.debug("consumed meta mq message:{}", JSON.toJSONString(consumedObjects));
+                    Object item = consumedObjects.get(0);
+                    if (item instanceof List) {
+                        mqMessage = MqMessage.convert((List) item);
+                    } else {
+                        mqMessage = MqMessage.convert(consumedObjects);
+                    }
+                } catch (Exception e) {
+                    log.warn("convert meta mq message error", e);
+                    return null;
+                }
+
                 acks(mqMessage.getMessageIds().toArray(new String[0]));
                 List<MetaInflowMessage> metaInflowMessages = mqMessage.getMessages();
                 if (CollectionUtils.isEmpty(metaInflowMessages)) {
@@ -156,8 +169,8 @@ public class RedisMqClient extends AbstractMqClient {
                     return metaInflowMessage.covert();
                 }).collect(Collectors.toList());
             }
-        } catch (InterruptedException e) {
-            log.error("polling message error, " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.warn("polling message error, " + e.getMessage(), e);
         }
 
         return null;
@@ -193,7 +206,7 @@ public class RedisMqClient extends AbstractMqClient {
                     publishResults.add(future.get());
                     log.info("publish to queue={}, data={}", entry.getKey(), SerializeUtil.serialize(entry.getValue()));
                 } catch (InterruptedException | ExecutionException e) {
-                    log.error("publish message to MQ error", e);
+                    log.warn("publish message to MQ error", e);
                 }
             });
 
@@ -208,7 +221,7 @@ public class RedisMqClient extends AbstractMqClient {
             log.info("publish to queue={}, data={}", metaOutflowMessage.getSendMasterQueue(), SerializeUtil.serialize(outData));
             return messageId;
         } catch (InterruptedException | ExecutionException e) {
-            log.error("publish message to MQ error", e);
+            log.warn("publish message to MQ error", e);
             return null;
         }
     }
@@ -229,10 +242,10 @@ public class RedisMqClient extends AbstractMqClient {
                 return;
             }
 
-            log.error("block get mq message error", e);
+            log.warn("block get mq message error", e);
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
-            log.error("block get mq message error", e);
+            log.warn("block get mq message error", e);
             throw new RuntimeException(e);
         }
     }
@@ -242,7 +255,7 @@ public class RedisMqClient extends AbstractMqClient {
         try {
             xack.get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error("xack to MQ error", e);
+            log.warn("xack to MQ error", e);
         }
     }
 
@@ -251,7 +264,7 @@ public class RedisMqClient extends AbstractMqClient {
         try {
             xack.get();
         } catch (InterruptedException | ExecutionException e) {
-            log.error("xack to MQ error", e);
+            log.warn("xack to MQ error", e);
         }
     }
 
@@ -307,14 +320,26 @@ public class RedisMqClient extends AbstractMqClient {
                     future = consumeConnection.async().dispatch(CommandType.XREADGROUP, new NestedMultiOutput<>(StringCodec.UTF8), commandArgs);
                     consumedObjects = future.get();
                 } catch (InterruptedException | ExecutionException e) {
-                    log.error("consume message from mq error", e);
+                    log.warn("consume message from mq error", e);
                     LockSupport.parkNanos(restartDelay * 1000000);
                     continue;
                 }
 
-                MqMessage mqMessage = MqMessage.convert((List) consumedObjects.get(0));
-                acks(mqMessage.getMessageIds().toArray(new String[0]));
+                MqMessage mqMessage = null;
+                try {
+                    log.debug("consumed meta mq message:{}", JSON.toJSONString(consumedObjects));
+                    Object item = consumedObjects.get(0);
+                    if (item instanceof List) {
+                        mqMessage = MqMessage.convert((List) item);
+                    } else {
+                        mqMessage = MqMessage.convert(consumedObjects);
+                    }
+                } catch (Exception e) {
+                    log.warn("convert meta mq message error", e);
+                    continue;
+                }
 
+                acks(mqMessage.getMessageIds().toArray(new String[0]));
                 List<MetaInflowMessage> metaInflowMessages = mqMessage.getMessages();
                 if (CollectionUtils.isEmpty(metaInflowMessages)) {
                     log.warn("consume message from mq is empty");
@@ -341,7 +366,7 @@ public class RedisMqClient extends AbstractMqClient {
                             log.warn("consume faster than process, wait a moment to consume");
                             ThreadPool.pool().getQueue().put(invocationTask);
                         } catch (InterruptedException ex) {
-                            log.error("wait a moment to consume message and submit invoke task", e);
+                            //log.warn("wait a moment to consume message and submit invoke task", e);
                         }
                     }
                 });

@@ -9,6 +9,7 @@ public enum GlobalExceptionType {
     NoSuchMethodException(105, "no such method exception"),
     DuplicationHandlerException(106,"duplication handler exception"),
     IllegalStreamOperation(107, "subscriber existed, cannot use polling together!"),
+    GetGraphError(108, "get sp graph error"),
     IllegalParameter(109, "illegal parameter");
 
     private int code;

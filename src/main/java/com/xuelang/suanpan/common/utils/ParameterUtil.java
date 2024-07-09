@@ -7,6 +7,7 @@ import com.xuelang.suanpan.common.entities.io.Line;
 import com.xuelang.suanpan.common.entities.enums.NodeReceiveMsgType;
 import com.xuelang.suanpan.common.entities.io.Inport;
 import com.xuelang.suanpan.common.entities.io.Outport;
+import com.xuelang.suanpan.common.exception.GlobalExceptionType;
 import com.xuelang.suanpan.common.exception.StreamGlobalException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -165,72 +166,74 @@ public class ParameterUtil {
 
     static {
         JSONObject graph = getGraphOld();
-        if (graph != null) {
-            JSONObject graphData = graph.getJSONObject("data");
-            JSONObject processData = graphData.getJSONObject("processes");
-            if (processData != null && !processData.isEmpty()) {
-                JSONObject nodeDefinition = processData.getJSONObject(getCurrentNodeId());
-                receiveMsgType = NodeReceiveMsgType.getByCode(nodeDefinition.getJSONObject("metadata").getString("receieveMsgType"));
-            }
+        if (graph == null || !graph.getBoolean("success")) {
+            throw new StreamGlobalException(GlobalExceptionType.GetGraphError, graph.getString("message"));
+        }
 
-            JSONArray connData = graphData.getJSONArray("connections");
-            if (connData != null && !connData.isEmpty()) {
-                JSONObject[] connArrays = connData.toArray(JSONObject.class);
-                for (JSONObject item : connArrays) {
-                    String srcNodeId = item.getJSONObject("src").getString("process");
-                    if (!srcNodeId.equals(getCurrentNodeId())) {
-                        continue;
-                    }
+        JSONObject graphData = graph.getJSONObject("data");
+        JSONObject processData = graphData.getJSONObject("processes");
+        if (processData != null && !processData.isEmpty()) {
+            JSONObject nodeDefinition = processData.getJSONObject(getCurrentNodeId());
+            receiveMsgType = NodeReceiveMsgType.getByCode(nodeDefinition.getJSONObject("metadata").getString("receieveMsgType"));
+        }
 
-                    String srcOutPortUUID = item.getJSONObject("src").getString("port");
-                    Outport outPort = null;
-                    try {
-                        outPort = Outport.bind(srcOutPortUUID);
-                    } catch (StreamGlobalException e) {
-                        log.error("bind outPort error", e);
-                        throw e;
-                    }
-
-                    JSONObject tgt = item.getJSONObject("tgt");
-                    String tgtNodeId = tgt.getString("process");
-                    String tgtInPortUUID = tgt.getString("port");
-
-                    Line line = new Line();
-                    line.setSrcNodeId(srcNodeId);
-                    line.setSrcOutPortUUID(srcOutPortUUID);
-                    line.setTgtNodeId(tgtNodeId);
-                    line.setTgtInPortUUID(tgtInPortUUID);
-                    line.setTgtQueue("mq-master-" + getUserId() + "-" + getAppId() + "-" + tgtNodeId);
-                    outPortLineMap.compute(outPort, (key, existedLines) -> {
-                        if (existedLines == null) {
-                            existedLines = new ArrayList<>();
-                        }
-
-                        existedLines.add(line);
-                        return existedLines;
-                    });
+        JSONArray connData = graphData.getJSONArray("connections");
+        if (connData != null && !connData.isEmpty()) {
+            JSONObject[] connArrays = connData.toArray(JSONObject.class);
+            for (JSONObject item : connArrays) {
+                String srcNodeId = item.getJSONObject("src").getString("process");
+                if (!srcNodeId.equals(getCurrentNodeId())) {
+                    continue;
                 }
-            }
 
-            //服务调用连线信息
-            JSONArray invokeConnections = graphData.getJSONArray("invokeConnections");
-            if (invokeConnections != null && !invokeConnections.isEmpty()) {
-                JSONObject[] connArrays = invokeConnections.toArray(JSONObject.class);
-                for (JSONObject item : connArrays) {
-                    String srcNodeId = item.getJSONObject("src").getString("process");
-                    if (!srcNodeId.equals(getCurrentNodeId())) {
-                        continue;
+                String srcOutPortUUID = item.getJSONObject("src").getString("port");
+                Outport outPort = null;
+                try {
+                    outPort = Outport.bind(srcOutPortUUID);
+                } catch (StreamGlobalException e) {
+                    log.error("bind outPort error", e);
+                    throw e;
+                }
+
+                JSONObject tgt = item.getJSONObject("tgt");
+                String tgtNodeId = tgt.getString("process");
+                String tgtInPortUUID = tgt.getString("port");
+
+                Line line = new Line();
+                line.setSrcNodeId(srcNodeId);
+                line.setSrcOutPortUUID(srcOutPortUUID);
+                line.setTgtNodeId(tgtNodeId);
+                line.setTgtInPortUUID(tgtInPortUUID);
+                line.setTgtQueue("mq-master-" + getUserId() + "-" + getAppId() + "-" + tgtNodeId);
+                outPortLineMap.compute(outPort, (key, existedLines) -> {
+                    if (existedLines == null) {
+                        existedLines = new ArrayList<>();
                     }
 
-                    String tgtNodeId = item.getJSONObject("tgt").getString("process");
-                    Integer connId = item.getJSONObject("metadata").getInteger("id");
+                    existedLines.add(line);
+                    return existedLines;
+                });
+            }
+        }
 
-                    Connection connection = new Connection();
-                    connection.setSrcNodeId(srcNodeId);
-                    connection.setTgtNodeId(tgtNodeId);
-                    connection.setId(connId);
-                    invokeConnectionMap.put(connId, connection);
+        //服务调用连线信息
+        JSONArray invokeConnections = graphData.getJSONArray("invokeConnections");
+        if (invokeConnections != null && !invokeConnections.isEmpty()) {
+            JSONObject[] connArrays = invokeConnections.toArray(JSONObject.class);
+            for (JSONObject item : connArrays) {
+                String srcNodeId = item.getJSONObject("src").getString("process");
+                if (!srcNodeId.equals(getCurrentNodeId())) {
+                    continue;
                 }
+
+                String tgtNodeId = item.getJSONObject("tgt").getString("process");
+                Integer connId = item.getJSONObject("metadata").getInteger("id");
+
+                Connection connection = new Connection();
+                connection.setSrcNodeId(srcNodeId);
+                connection.setTgtNodeId(tgtNodeId);
+                connection.setId(connId);
+                invokeConnectionMap.put(connId, connection);
             }
         }
     }

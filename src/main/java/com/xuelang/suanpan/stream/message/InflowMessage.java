@@ -17,9 +17,14 @@ public class InflowMessage {
         this.context = context;
     }
 
-    public Object getData() {
+    public Object getData(Integer inPortIndex) {
         // TODO: 2024/3/25 根据输入端口数据类型对data进行转换
-        return data;
+        if (data == null || data.isEmpty()){
+            return null;
+        }
+
+        Inport inport = Inport.bind(inPortIndex);
+        return data.get(inport);
     }
 
     public void setData(Map<Inport, Object> data) {

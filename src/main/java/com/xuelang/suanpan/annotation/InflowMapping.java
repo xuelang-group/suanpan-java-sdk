@@ -10,5 +10,5 @@ public @interface InflowMapping {
      * 异步订阅的输入桩端口序号
      * @return 输入桩端口序号
      */
-    int portIndex() default -1;
+    int portIndex() default -Integer.MAX_VALUE;
 }

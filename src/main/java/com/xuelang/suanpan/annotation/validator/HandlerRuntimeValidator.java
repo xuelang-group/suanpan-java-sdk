@@ -32,7 +32,7 @@ public class HandlerRuntimeValidator {
         filteredMethods.stream().forEach(method -> {
             validate(clazz, method);
             InflowMapping inflowMapping = method.getAnnotation(InflowMapping.class);
-            if (inflowMapping.portIndex() != -1 &&
+            if (inflowMapping.portIndex() != -Integer.MAX_VALUE &&
                     (inflowMapping.portIndex() > inportMaxIndex || inflowMapping.portIndex() <= 0)) {
                 throw new RuntimeException(InflowMapping.class.getSimpleName() + " illegal scope inport value set, " +
                         "cannot be negative value or bigger than port index max value: " + inportMaxIndex + ", Clazz: "
@@ -44,14 +44,14 @@ public class HandlerRuntimeValidator {
                         "cannot register any other handler duplication! Caused by: " + clazz.getName() + ", Method: " + method.getName());
             }
 
-            if (inflowMapping.portIndex() != -1) {
+            if (inflowMapping.portIndex() != -Integer.MAX_VALUE) {
                 if (InPortHandlerMap.containsKey(inflowMapping.portIndex())) {
                     throw new RuntimeException("handler method cannot has duplication port index " + " Caused by: "
                             + clazz.getName() + ", Method: " + method.getName());
                 } else {
                     InPortHandlerMap.put(inflowMapping.portIndex(), inflowMapping.portIndex());
                 }
-            } else if (inflowMapping.portIndex() == -1 && !existGlobalHandler) {
+            } else if (inflowMapping.portIndex() == -Integer.MAX_VALUE && !existGlobalHandler) {
                 existGlobalHandler = true;
                 globalHandlerClass = clazz;
                 globalHandlerMethod = method;

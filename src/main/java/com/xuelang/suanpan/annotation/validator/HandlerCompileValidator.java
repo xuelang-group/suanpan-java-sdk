@@ -60,13 +60,13 @@ public class HandlerCompileValidator extends AbstractProcessor {
                         }
 
                         // 校验注解设定值合法性
-                        if (inflowMapping.portIndex() <= 0 && inflowMapping.portIndex() != -1) {
+                        if (inflowMapping.portIndex() <= 0 && inflowMapping.portIndex() != -Integer.MAX_VALUE) {
                             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                                     "Method: " + method + " @" + InflowMapping.class.getSimpleName() + " portIndex value cannot be negative", element);
                         }
 
                         // 校验是否存在重复的全局监听handler
-                        if (inflowMapping.portIndex() == -1 && globalPortHandler != null) {
+                        if (inflowMapping.portIndex() == -Integer.MAX_VALUE && globalPortHandler != null) {
                             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
                                     "There already has a global port handler to listen all " +
                                             "inport data, and cannot be duplication! Method: " + method, element);
@@ -75,7 +75,7 @@ public class HandlerCompileValidator extends AbstractProcessor {
                         globalPortHandler = handler;
 
                         // 缓存输入端口和handler的映射
-                        if (inflowMapping.portIndex() != -1) {
+                        if (inflowMapping.portIndex() != -Integer.MAX_VALUE) {
                             List<Integer> existInportIndexes = handlerPortIndex.get(handler);
                             if (CollectionUtils.isEmpty(existInportIndexes)) {
                                 existInportIndexes = new ArrayList<>(inflowMapping.portIndex());

@@ -1,5 +1,6 @@
 package com.xuelang.mqstream.api.requests;
 
+import com.xuelang.mqstream.common.CommonUtil;
 import com.xuelang.mqstream.config.GlobalConfig;
 import org.apache.commons.lang3.StringUtils;
 
@@ -18,6 +19,9 @@ public class AffinityRequest extends CommonRequest {
 
         if (StringUtils.isNotBlank(GlobalConfig.host)) {
             String protocol = GlobalConfig.hostTls ? "https" : "http";
+            if (CommonUtil.isWindows()) {
+                return String.format("%s://%s%s", protocol, GlobalConfig.host + ":" + GlobalConfig.port, path);
+            }
             return String.format("%s://%s%s", protocol, GlobalConfig.host, path);
         }
 

@@ -26,30 +26,35 @@ import java.util.concurrent.ExecutionException;
 
 public class RedisStreamMqClient implements MqClient {
 
-    private RedisClient client;
-    private StatefulRedisConnection<String, String> connection;
+    private final RedisClient client;
+    private final StatefulRedisConnection<String, String> recvConnection;
+
+    private final StatefulRedisConnection<String, String> sendConnection;
 
     public static final String SEARCH_MSG = "BUSYGROUP Consumer Group name already exists";
 
     public RedisStreamMqClient(String url) {
         this.client = RedisClient.create(url);
-        this.connection = this.client.connect();
+        this.recvConnection = this.client.connect();
+        this.sendConnection = this.client.connect();
     }
 
     public RedisStreamMqClient(String host, int port) {
         RedisURI uri = RedisURI.Builder.redis(host, port).build();
         this.client = RedisClient.create(uri);
-        this.connection = this.client.connect();
+        this.recvConnection = this.client.connect();
+        this.sendConnection = this.client.connect();
     }
 
     public RedisStreamMqClient(String host, int port, String password) {
         RedisURI uri = RedisURI.Builder.redis(host, port).withPassword(password).build();
         this.client = RedisClient.create(uri);
-        this.connection = this.client.connect();
+        this.recvConnection = this.client.connect();
+        this.sendConnection = this.client.connect();
     }
     @Override
     public void createQueue(Queue queue, boolean existedOk) {
-        RedisAsyncCommands<String, String> commands = this.connection.async();
+        RedisAsyncCommands<String, String> commands = this.recvConnection.async();
         StringCodec codec = StringCodec.UTF8;
         CommandArgs<String, String> args = new CommandArgs<>(codec)
                 .add(CommandKeyword.CREATE)
@@ -75,7 +80,7 @@ public class RedisStreamMqClient implements MqClient {
 
     @Override
     public String sendMessage(Message message) {
-        RedisAsyncCommands<String, String> commands = this.connection.async();
+        RedisAsyncCommands<String, String> commands = this.sendConnection.async();
         XAddArgs addArgs = XAddArgs.Builder
                 .maxlen(message.getMaxLength())
                 .approximateTrimming(message.isApproximateTrimming());
@@ -100,7 +105,7 @@ public class RedisStreamMqClient implements MqClient {
                 .build();
         createQueue(queue, true);
 
-        RedisAsyncCommands<String, String> commands = this.connection.async();
+        RedisAsyncCommands<String, String> commands = this.recvConnection.async();
         StringCodec codec = StringCodec.UTF8;
         CommandArgs<String, String> args = new CommandArgs<>(codec)
                 .add(CommandKeyword.GROUP)
@@ -139,7 +144,7 @@ public class RedisStreamMqClient implements MqClient {
 
     @Override
     public void ackMessage(String queue, String group, String... messageIds) {
-        RedisAsyncCommands<String, String> commands = this.connection.async();
+        RedisAsyncCommands<String, String> commands = this.recvConnection.async();
         RedisFuture<Long> xack = commands.xack(queue, group, messageIds);
         try {
             xack.get();
@@ -150,7 +155,7 @@ public class RedisStreamMqClient implements MqClient {
 
     @Override
     public void destroy() {
-        if (this.connection != null){ this.connection.close(); }
+        if (this.recvConnection != null){ this.recvConnection.close(); }
         if (this.client != null) { this.client.shutdown(); }
     }
 }

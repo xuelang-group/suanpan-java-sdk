@@ -108,15 +108,28 @@ public class DefaultMessageRecvHandler implements XReadGroupHandler {
 
         Boolean asyncDealMessage = baseType.isAsyncDealMessage(mappingCache);
 
+        if (asyncExecutorService.isTerminated()) {
+            log.error("AsyncExecutorService is terminated, cannot execute task.");
+            asyncExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() + 2);
+        }
         ExecutorService executorService = asyncExecutorService;
 
         //async 为 false 改用同步线程执行
         if (!asyncDealMessage) {
+            if (syncExecutorService.isTerminated()) {
+                log.error("SyncExecutorService is terminated, cannot execute task.");
+                syncExecutorService = Executors.newFixedThreadPool(1);
+            }
             executorService = syncExecutorService;
         }
 
         executorService.execute(() -> {
-            baseType.dealMessageInvoke(mappingCache);
+            try {
+                baseType.dealMessageInvoke(mappingCache);
+            } catch (Exception e) {
+                log.error("消息处理异常: {} - {}", baseType.getClass().getName(), e.getMessage(), e);
+            }
+
         });
     }
 

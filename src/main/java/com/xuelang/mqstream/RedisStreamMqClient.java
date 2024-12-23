@@ -1,5 +1,6 @@
 package com.xuelang.mqstream;
 
+import com.alibaba.fastjson.JSON;
 import com.xuelang.mqstream.handler.ExceptionHandler;
 import com.xuelang.mqstream.handler.XReadGroupHandler;
 import com.xuelang.mqstream.options.Consumer;
@@ -17,6 +18,7 @@ import io.lettuce.core.output.*;
 import io.lettuce.core.protocol.CommandArgs;
 import io.lettuce.core.protocol.CommandKeyword;
 import io.lettuce.core.protocol.CommandType;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+@Slf4j
 public class RedisStreamMqClient implements MqClient {
 
     private final RedisClient client;
@@ -88,6 +91,7 @@ public class RedisStreamMqClient implements MqClient {
 //        keysAndValues.add("request_id");
 //        keysAndValues.add(message.getRequestId());
         Object[] data = keysAndValues.toArray(new Object[0]);
+        log.info("send message to master:{}",keysAndValues);
         RedisFuture<String> future =
                 commands.xadd(message.getQueue(), addArgs, data);
         try {

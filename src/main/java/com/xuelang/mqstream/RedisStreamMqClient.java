@@ -85,8 +85,8 @@ public class RedisStreamMqClient implements MqClient {
                 .maxlen(message.getMaxLength())
                 .approximateTrimming(message.isApproximateTrimming());
         List<Object> keysAndValues = new ArrayList<>(Arrays.asList(message.getKeysAndValues()));
-        keysAndValues.add("request_id");
-        keysAndValues.add(message.getRequestId());
+//        keysAndValues.add("request_id");
+//        keysAndValues.add(message.getRequestId());
         Object[] data = keysAndValues.toArray(new Object[0]);
         RedisFuture<String> future =
                 commands.xadd(message.getQueue(), addArgs, data);

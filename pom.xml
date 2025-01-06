@@ -289,6 +289,51 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <!-- 过滤器排除配置文件-->
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <includes>
+                                        <include>com/xuelang/**</include>
+                                        <include>example/**</include>
+                                        <include>io/minio/**</include>
+                                        <include>io/lettuce/core/**</include>
+                                        <include>shaded/**</include>
+                                        <include>META-INF/maven/com.xuelangcloud/**</include>
+                                    </includes>
+                                </filter>
+                            </filters>
+                            <relocations>
+                                <relocation>
+                                    <!-- 原依赖路径 -->
+                                    <pattern>io.minio</pattern>
+                                    <!-- sdk依赖路径 -->
+                                    <shadedPattern>shaded.io.minio</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <!-- 原依赖路径 -->
+                                    <pattern>io.lettuce.core</pattern>
+                                    <!-- sdk依赖路径 -->
+                                    <shadedPattern>shaded.io.lettuce.core</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
 
 

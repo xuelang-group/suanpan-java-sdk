@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.xuelangcloud</groupId>
     <artifactId>suanpan-java-sdk</artifactId>
-    <version>2.1.8</version>
+    <version>2.1.9</version>
     <packaging>jar</packaging>
     <name>mq-stream</name>
     <description>suanpan java sdk</description> <!-- 项目描述 -->
